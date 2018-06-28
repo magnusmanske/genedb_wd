@@ -1,0 +1,79 @@
+<template id='gene-search-box-template'>
+<div>
+	<div>
+		<input type='text' v-model='query' @keyup='onQueryChange' id='gene_search_box' tt_placeholder='ph_gene_search' style='width:300px;' autofocus />
+	</div>
+	<div v-if='searching'>...</div>
+	<div v-else-if='query==""'></div>
+	<div v-else-if='results.length==0'><i>No results found</i></div>
+	<div v-else>
+		<gene-list :genes='genes' show_chromosome='1'></gene-list>
+		<div v-if='results.length==50' style='display:block'><i>Potentially more results</i></div>
+	</div>
+</div>
+</template>
+
+<script>
+'use strict';
+
+Vue.component ( 'gene-search-box' , {
+	template : '#gene-search-box-template' ,
+	data : function () { return { query:'' , results:[] , timeout:'' , query_cache:{} , searching:false , genes:[] , last_query:'' } } ,
+	mounted : function () {
+		setTimeout ( function () { $('#gene_search_box').focus()} , 100 ) ;
+	} ,
+	methods : {
+		onQueryChange : function () {
+			var me = this ;
+			clearTimeout ( me.timeout ) ;
+			me.timeout = setTimeout ( me.doSearch , 500 ) ;
+		} ,
+		doSearch : function () {
+			var me = this ;
+			let the_query = $.trim(me.query.toUpperCase()) ;
+			if ( the_query == '' ) {
+				me.results = [] ;
+				me.genes = [] ;
+				return ;
+			}
+			if ( the_query == me.last_query ) {
+				return ;
+			}
+			me.searching = true ;
+			if ( typeof me.query_cache[the_query] != 'undefined' ) {
+				me.results = me.query_cache[the_query] ;
+				me.setGenesFromResults() ;
+				me.searching = false ;
+				return ;
+			}
+			me.results = [] ;
+			let sparql = 'SELECT DISTINCT ?q { ?q wdt:P3382 [] { { ?q skos:altLabel ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } UNION { ?q rdfs:label ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } UNION { ?q wdt:P3382 ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } } } LIMIT 50' ;
+			// XP_001349418
+			wd.loadSPARQLitems ( sparql , function ( d ) {
+				wd.getItemBatch ( d , function () {
+					me.query_cache[the_query] = d ;
+					me.results = d ;
+					me.setGenesFromResults() ;
+					me.last_query = the_query ;
+					me.searching = false ;
+				} ) ;
+			} ) ;
+		} ,
+		setGenesFromResults : function () {
+			var me = this ;
+			me.genes = [] ;
+			$.each ( me.results , function ( dummy , gene_q ) {
+				let i = wd.getItem ( gene_q ) ;
+				if ( typeof i == 'undefined' ) return ;
+				let gene = { q:gene_q , i:i } ;
+				if ( i.hasClaims('P1057') ) gene.q_chromosome = (i.getClaimItemsForProperty('P1057',true))[0] ;
+				if ( i.hasClaims('P3382') ) gene.genedb = i.getFirstStringForProperty('P3382') ;
+				if ( i.hasClaims('P644') ) gene.start = i.getFirstStringForProperty('P644')*1 ;
+				if ( i.hasClaims('P645') ) gene.end = i.getFirstStringForProperty('P645')*1 ;
+				me.genes.push ( gene ) ;
+			} ) ;
+		}
+	}
+} ) ;
+
+</script>

@@ -1,0 +1,57 @@
+<template id='gene-list-template'>
+<div>
+	<table class='table table-striped'>
+		<thead>
+			<tr>
+				<th tt='gene_name'></th>
+				<th tt='genedb_id'></th>
+				<th tt='gene_description'></th>
+				<th tt='gene_start'></th>
+				<th tt='gene_end'></th>
+				<th v-if='show_chromosome' tt='chromosome'></th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr v-for='gene in genes'>
+				<td nowrap style='width:200px;'>
+					<router-link :to='"/gene/"+gene.genedb'>
+						<wd-link :item='gene.q' as_text='1'></wd-link>
+					</router-link>
+				</td>
+				<td style='width:150px;'>{{gene.genedb}}</td>
+				<td>
+					<span v-if='typeof gene.i != "undefined"'>
+						{{gene.i.getDesc()}}
+					</span>
+				</td>
+				<td style='width:120px;text-align:right;font-family:Courier'>{{formatPosition(gene.start)}}</td>
+				<td style='width:120px;text-align:right;font-family:Courier'>{{formatPosition(gene.end)}}</td>
+				<td v-if='show_chromosome'>
+					<router-link v-if='typeof gene.q_chromosome!="undefined"' :to='"/chromosome/"+gene.q_chromosome'>
+						<wd-link :item='gene.q_chromosome' as_text='1'></wd-link>
+					</router-link>
+				</td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+</template>
+
+<script>
+'use strict';
+
+Vue.component ( 'gene-list' , {
+	template : '#gene-list-template' ,
+	props : [ 'genes' , 'show_chromosome' ] ,
+	data : function () { return {} } ,
+	updated : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	methods : {
+		formatPosition : function ( p ) {
+			if ( typeof p == 'undefined' || p == '' ) return '' ;
+			return (''+p).replace(/[0-9](?=(?:[0-9]{3})+(?![0-9]))/,'$&,') ;
+		}
+	}
+} ) ;
+
+</script>

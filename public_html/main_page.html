@@ -1,0 +1,41 @@
+<template id='main-page-template'>
+<div class='container'>
+	<tool-navbar></tool-navbar>
+	<div class='row'>
+		<div class='lead col-12'>
+			A demo version of GeneDB, based on Wikidata.
+		</div>
+	</div>
+	<div class='row'>
+		<div class='col-12'><h3>Examples</h3></div>
+	</div>
+	<div class='row'>
+		<div class='col-12'>
+			<ul>
+				<li><router-link to='/gene/PF3D7_0810800'>Gene <i>DHPS</i></router-link></li>
+				<li><router-link to='/go/GO:0042493'>Genes with GO term GO:0042493</router-link></li>
+				<li><router-link to='/chromosome/Q18967851'>All genes on chromosome Pf3D7_08_v3</router-link></li>
+			</ul>
+		</div>
+	</div>
+	<div class='row'>
+		<div class='col-12'><h3>Search</h3></div>
+	</div>
+	<div class='row'>
+		<div class='col-12'>
+			<gene-search-box></gene-search-box>
+		</div>
+	</div>
+</div>
+</template>
+
+<script>
+'use strict';
+
+let MainPage = Vue.extend ( {
+	methods : {
+	} ,
+	template : '#main-page-template'
+} ) ;
+
+</script>

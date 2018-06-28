@@ -1,0 +1,48 @@
+<template id='chromosome-template'>
+<div class='container'>
+	<tool-navbar></tool-navbar>
+	<div v-if='loading' class='row'><i>Loading...</i></div>
+	<div v-else class='row'>
+		<div class='lead'>
+			Genes on chromosome <wd-link :item='q_chromosome'></wd-link> with GeneDB
+		</div>
+		<gene-list :genes='genes'></gene-list>
+	</div>
+</div>
+</template>
+
+
+<script>
+'use strict';
+
+let Chromosome = Vue.extend ( {
+	props : [ 'q_chromosome' ] ,
+	data : function () { return { loading:true , genes:[] } } ,
+	created : function () {
+		var me = this ;
+		me.genes = [] ;
+		let sparql = 'SELECT DISTINCT ?q ?genedb ?start ?end { ?q wdt:P1057 wd:'+me.q_chromosome+' ; wdt:P3382 ?genedb OPTIONAL { ?q wdt:P644 ?start } OPTIONAL { ?q wdt:P645 ?end } } ORDER BY (?start*1)' ;
+		wd.loadSPARQL ( sparql , function ( d ) {
+			let to_load = [ me.q_chromosome ] ;
+			$.each ( d.results.bindings , function ( dummy , b ) {
+				let q = b.q.value.replace(/^.+\/Q/,'Q') ; ;
+				let start = (typeof b.start=='undefined') ? '' : b.start.value*1 ;
+				let end = (typeof b.end=='undefined') ? '' : b.end.value*1 ;
+				me.genes.push ( { q:q , start:start , end:end , genedb:b.genedb.value } ) ;
+				to_load.push ( q ) ;
+			} ) ;
+			me.genes.sort ( function ( a , b ) { return a.start*1 - b.start*1 } ) ;
+			wd.getItemBatch ( to_load , function () {
+				$.each ( me.genes , function ( k , v ) {
+					v.i = wd.getItem ( v.q ) ;
+				} ) ;
+				me.loading = false ;
+			} ) ;
+		} ) ;
+	} ,
+	updated : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	methods : {
+	} ,
+	template:"#chromosome-template"
+} ) ;
