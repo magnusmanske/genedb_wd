@@ -40,7 +40,7 @@ let GoTerm = Vue.extend ( {
 	data : function () { return { loading:true , results:{} } } ,
 	created : function () {
 		var me = this ;
-		let sparql = 'SELECT DISTINCT ?q ?go ?genedb ?species ?chromosome ?start ?end { VALUES ?props { wdt:P680 wdt:P681 wdt:P682 } . ?q wdt:P3382 ?genedb ; ?props ?go . ?go wdt:P686 "' + me.go_term.toUpperCase() + '" OPTIONAL { ?q wdt:P703 ?species } OPTIONAL { ?q wdt:P1057 ?chromosome } OPTIONAL { ?q wdt:P644 ?start } OPTIONAL { ?q wdt:P645 ?end } } ORDER BY ?genedb' ;
+		let sparql = 'SELECT DISTINCT ?q ?go ?genedb ?species ?chromosome ?start ?end { VALUES ?props { wdt:P680 wdt:P681 wdt:P682 } . ?q wdt:P3382 ?genedb ; wdt:P688 ?q_protein . ?q_protein ?props ?go . ?go wdt:P686 "' + me.go_term.toUpperCase() + '" OPTIONAL { ?q wdt:P703 ?species } OPTIONAL { ?q wdt:P1057 ?chromosome } OPTIONAL { ?q wdt:P644 ?start } OPTIONAL { ?q wdt:P645 ?end } } ORDER BY ?genedb' ;
 		wd.loadSPARQL ( sparql , function ( d ) {
 			let to_load = [] ;
 			$.each ( d.results.bindings , function ( dummy , b ) {

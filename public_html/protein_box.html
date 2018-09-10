@@ -97,6 +97,10 @@
 							<td tt='genedb'></td>
 							<td><a target='_blank' class='external' :href='"http://www.genedb.org/gene/"+genedb_id'>{{genedb_id}}</a></td>
 						</tr>
+						<tr v-for='pid in external_ids' v-if='i.hasClaims(pid)'>
+							<td>{{wd.getItem(pid).getLabel()}}</td>
+							<td><a :href="wd.getItem(pid).getFirstStringForProperty('P1630').replace('$1',i.getFirstStringForProperty(pid))" class='external' target='_blank'>{{i.getFirstStringForProperty(pid)}}</a></td>
+						</tr>
 						<tr>
 							<td tt='wikidata'></td>
 							<td><wd-link :item='q' :label='q'></wd-link></td>
@@ -118,33 +122,6 @@
 			</div>
 		</div>
 
-	</div>
-	<div v-else class='row'>
-		<div v-if='possible_items.length>0'>
-			{{possible_items}}
-		</div>
-		<div v-else>
-			ERROR: <tt>{{error_message}}</tt>
-		</div>
-	</div>
-<!--
-	<tool-navbar></tool-navbar>
-	<div v-if='loading' class='row'><i>Loading...</i></div>
-	<div v-else-if='loaded' class='row'>
-		<div class="card mb-2 mt-2" style="width:100%">
-			<div class="card-header" tt='general_information'></div>
-			<div class="card-body">
-				<h5 class="card-title" style='text-align:right'>
-					<small>
-						<span tt='last_modified'></span>
-						{{i.raw.modified.replace(/[A-Z]/g,' ')}}
-					</small>
-				</h5>
-
-			</div>
-		</div>
-
-
 		<div v-if='loading_main_subject || main_subject.length>0' class="card mb-2" style="width:100%">
 			<div class="card-header" tt='main_subject'></div>
 			<div v-if='show_all_main_subject' class="card-body">
@@ -160,7 +137,15 @@
 		</div>
 
 	</div>
--->
+	<div v-else class='row'>
+		<div v-if='possible_items.length>0'>
+			{{possible_items}}
+		</div>
+		<div v-else>
+			ERROR: <tt>{{error_message}}</tt>
+		</div>
+	</div>
+
 </div>
 </template>
 
@@ -201,6 +186,7 @@ Vue.component ( 'protein-box' , {
 		type:''
 	} ,
 	go_props : ["P680","P681","P682"] ,
+	external_ids : ["P352","P214"] ,
 	main_subject : [] , loading_main_subject:false , show_all_main_subject:false
 	} } ,
 	created : function () {
@@ -208,6 +194,7 @@ Vue.component ( 'protein-box' , {
 		me.main_subject = [] ;
 		Promise.all ( [
 			new Promise( me.loadItem ) ,
+			new Promise( me.loadExternalIDs ) ,
 			new Promise( me.loadGeneOntologyEvidenceCodes )
 		] )	.then ( () => {
 			if ( me.q != '' ) me.loadLiterature() ;
@@ -256,6 +243,9 @@ Vue.component ( 'protein-box' , {
 				me.loading_main_subject = false ;
 				me.show_all_main_subject = true ;
 			} ) ;
+		} ,
+		loadExternalIDs : function (resolve, reject) {
+			wd.getItemBatch ( this.external_ids , function () { resolve() } ) ;
 		} ,
 		loadLiterature : function () {
 			var me = this ;
