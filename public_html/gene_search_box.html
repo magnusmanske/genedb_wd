@@ -47,7 +47,7 @@ Vue.component ( 'gene-search-box' , {
 				return ;
 			}
 			me.results = [] ;
-			let sparql = 'SELECT DISTINCT ?q { ?q wdt:P3382 [] { { ?q skos:altLabel ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } UNION { ?q rdfs:label ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } UNION { ?q wdt:P3382 ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } } } LIMIT 50' ;
+			let sparql = 'SELECT DISTINCT ?q { ?q wdt:P3382 [] ; wdt:P31 wd:Q7187 { { ?q skos:altLabel ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } UNION { ?q rdfs:label ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } UNION { ?q wdt:P3382 ?name FILTER ( STRSTARTS(ucase(?name),"'+the_query+'") ) } } } LIMIT 50' ;
 			// XP_001349418
 			wd.loadSPARQLitems ( sparql , function ( d ) {
 				wd.getItemBatch ( d , function () {

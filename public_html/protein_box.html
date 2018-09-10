@@ -1,0 +1,287 @@
+<template id='go-list-template'>
+	<div v-if='loaded && claims.length>0' style="display:flex;flex-direction:row;" class='card'>
+		<div style="width:20%;padding:2px;">
+			<wd-link :item='go_prop' as_text='1'></wd-link>
+		</div>
+		<div style="display:flex;flex-direction:column;width:80%">
+			<ul class="list-group list-group-flush">
+				<li v-for='claim in claims' class="list-group-item" style="display:flex;flex-direction:row">
+					<div style='width:20%'>
+						<wd-link :item='claim.mainsnak.datavalue.value.id' as_text='1'></wd-link>
+						<br/>
+						(
+						<span v-for='go_term in wd.getItem(claim.mainsnak.datavalue.value.id).getStringsForProperty("P686")' class='mr-1'>
+							<router-link :to='"/go/"+go_term'>{{go_term}}</router-link>
+						</span>
+						)
+					</div>
+					<div style='width:80%'>
+						<div v-for='ref in (claim.references||[])' style='display:flex;flex-direction:row;width:100%'>
+							<div style='width:30%;display:flex;flex-direction:column'>
+								<div v-for='dm in (ref.snaks.P459||[])'>
+									{{evidence_codes[dm.datavalue.value.id]}}
+								</div>
+							</div>
+							<div style='width:70%;display:flex;flex-direction:column'>
+								<div v-for='si in (ref.snaks.P248||[])'>
+									<publication :item='si.datavalue.value.id'></publication>
+									<!--<wd-link :item='si.datavalue.value.id'></wd-link>-->
+								</div>
+							</div>
+						</div>
+					</div>
+				</li>
+			</ul>
+		</div>
+	</div>
+</template>
+
+
+
+<template id='protein-box-template'>
+<div>
+	<div v-if='loading' class='row'><i>Loading...</i></div>
+	<div v-else-if='loaded' class='row'>
+		<div class="card mb-2 mt-2" style="width:100%">
+			<div class="card-header" tt='general_information'></div>
+			<div class="card-body">
+				<h5 v-if='full_info' class="card-title" style='text-align:right'>
+					<small>
+						<span tt='last_modified'></span>
+						{{i.raw.modified.replace(/[A-Z]/g,' ')}}
+					</small>
+				</h5>
+
+				<table class="table table-sm table-borderless">
+					<tbody>
+						<tr>
+							<td tt='systematic_name' nowrap></td>
+							<td>
+								<i>{{genedb_id}}</i>
+								<br/><span v-if='data.aliases.length>0' tt='previously_known_as' :tt1='data.aliases.join(", ")'></span>
+							</td>
+						</tr>
+						<tr>
+							<td tt='protein_name'></td>
+							<td><b>{{i.getLabel("en")}}</b></td>
+						</tr>
+						<tr v-if='i.getDesc()!=""'>
+							<td tt='description'></td>
+							<td>{{i.getDesc()}}</td>
+						</tr>
+						<tr v-if='full_info && i.hasClaims("P703")'>
+							<td>
+								<wd-link item="P703" as_text="1"></wd-link>
+							</td>
+							<td>
+								<div v-for='taxon_q in i.getClaimItemsForProperty("P703",true)'>
+									<wd-link :item='taxon_q' as_text='1'></wd-link>
+								</div>
+							</td>
+						</tr>
+						<tr v-if='i.hasClaims("P279")'>
+							<td tt='protein_type'></td>
+							<td>
+								<div v-for='type_q in i.getClaimItemsForProperty("P279",true)'>
+									<wd-link :item='type_q' as_text='1'></wd-link>
+								</div>
+							</td>
+						</tr>
+						<tr v-if='full_info && gene_genedb_id!=""'>
+							<td tt='encoded_by'></td>
+							<td>
+								<router-link :to='"/gene/"+gene_genedb_id'>{{gene_genedb_id}}</router-link>
+							</td>
+						</tr>
+						<tr>
+							<td tt='genedb'></td>
+							<td><a target='_blank' class='external' :href='"http://www.genedb.org/gene/"+genedb_id'>{{genedb_id}}</a></td>
+						</tr>
+						<tr>
+							<td tt='wikidata'></td>
+							<td><wd-link :item='q' :label='q'></wd-link></td>
+						</tr>
+					</tbody>
+				</table>
+
+
+			</div>
+		</div>
+
+		<div class="card mb-2" style="width:100%">
+			<div class="card-header" tt='curation'></div>
+			<div class="card-body">
+				<h5 class="card-title" tt='gene_ontology'></h5>
+				<div style="display:flex;flex-direction:column;width:100%;font-size:10pt">
+					<go-list :key='go_prop' v-for='go_prop in go_props' :go_prop='go_prop' :claims='i.getClaimsForProperty(go_prop)'></go-list>
+				</div>
+			</div>
+		</div>
+
+	</div>
+	<div v-else class='row'>
+		<div v-if='possible_items.length>0'>
+			{{possible_items}}
+		</div>
+		<div v-else>
+			ERROR: <tt>{{error_message}}</tt>
+		</div>
+	</div>
+<!--
+	<tool-navbar></tool-navbar>
+	<div v-if='loading' class='row'><i>Loading...</i></div>
+	<div v-else-if='loaded' class='row'>
+		<div class="card mb-2 mt-2" style="width:100%">
+			<div class="card-header" tt='general_information'></div>
+			<div class="card-body">
+				<h5 class="card-title" style='text-align:right'>
+					<small>
+						<span tt='last_modified'></span>
+						{{i.raw.modified.replace(/[A-Z]/g,' ')}}
+					</small>
+				</h5>
+
+			</div>
+		</div>
+
+
+		<div v-if='loading_main_subject || main_subject.length>0' class="card mb-2" style="width:100%">
+			<div class="card-header" tt='main_subject'></div>
+			<div v-if='show_all_main_subject' class="card-body">
+				<ul class="list-group list-group-flush">
+					<li v-for='paper_q in main_subject' class="list-group-item">
+						<publication :item='paper_q' num_authors='5'></publication>
+					</li>
+				</ul>
+			</div>
+			<div v-else class="card-body">
+				<a href='#' @click.prevent='loadLiteratureDetails()' tt='show_x_main_subject_papers' :tt1='main_subject.length'></a>
+			</div>
+		</div>
+
+	</div>
+-->
+</div>
+</template>
+
+<script>
+'use strict';
+
+/*
+TODO: Show all genes on the same chromsome
+For chromosome Q18967858:
+SELECT * { ?q wdt:P3382 ?genedb ; wdt:P1057 wd:Q18967858 ; wdt:P644 ?start ; wdt:P645 ?end }
+*/
+
+Vue.component ( 'go-list' , {
+	template : '#go-list-template' ,
+	props : [ 'go_prop' , 'claims' ] ,
+	data : function () { return { loaded:false } } ,
+	created : function () {
+		let me = this ;
+		let to_load = [] ;
+		$.each ( me.claims , function ( dummy , claim ) {
+			if ( typeof claim.mainsnak == 'undefined' ) return ;
+			if ( typeof claim.mainsnak.datavalue == 'undefined' ) return ;
+			let q = claim.mainsnak.datavalue.value.id ;
+			to_load.push ( q ) ;
+		} ) ;
+		wd.getItemBatch ( to_load , function () {
+			me.loaded = true ;
+		} ) ;
+	}
+} ) ;
+
+let evidence_codes ;
+
+Vue.component ( 'protein-box' , {
+	props : [ 'q' , 'full_info' ] ,
+	data : function () { return { loading:true , genedb_id:'' , gene_genedb_id:'' , loaded:false , q:'' , i:{} , possible_items:[] , error_message:'' , data:{
+		aliases:[] ,
+		type:''
+	} ,
+	go_props : ["P680","P681","P682"] ,
+	main_subject : [] , loading_main_subject:false , show_all_main_subject:false
+	} } ,
+	created : function () {
+		let me = this ;
+		me.main_subject = [] ;
+		Promise.all ( [
+			new Promise( me.loadItem ) ,
+			new Promise( me.loadGeneOntologyEvidenceCodes )
+		] )	.then ( () => {
+			if ( me.q != '' ) me.loadLiterature() ;
+			me.loading = false ;
+		} , () => {
+			if ( me.i.hasClaims("P702") ) {
+				let gene_q = me.i.getClaimItemsForProperty("P702",true) ;
+				wd.loadItems ( gene_q , function () {
+					let i = wd.getItem(gene_q) ;
+					if ( typeof i == 'undefined' ) {
+						me.gene_genedb_id = '' ;
+					} else {
+						me.gene_genedb_id = i.getFirstStringForProperty("3382") ;
+					}
+					me.loading = false ;
+				} ) ;
+			} else {
+				me.gene_genedb_id = '' ;
+				me.loading = false ;
+			}
+		} ) ;
+
+	} ,
+	updated : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	methods : {
+		loadItem : function (resolve, reject) {
+			var me = this ;
+			wd.getItemBatch ( [me.q] , function () {
+				me.i = wd.getItem ( me.q ) ;
+				if ( typeof me.i == 'undefined' ) {
+					me.error_message = "Failed to load '" + me.q + "' from Wikidata API" ;
+					reject() ;
+				} else {
+					me.data.aliases = Object.values ( me.i.getAliasesForLanguage("en") ) ;
+					me.genedb_id = me.i.getFirstStringForProperty('P3382') ;
+					me.loaded = true ;
+					resolve() ;
+				}
+			} ) ;
+		} ,
+		loadLiteratureDetails : function () {
+			var me = this ;
+			me.loading_main_subject = true ;
+			wd.getItemBatch ( me.main_subject , function () {
+				me.loading_main_subject = false ;
+				me.show_all_main_subject = true ;
+			} ) ;
+		} ,
+		loadLiterature : function () {
+			var me = this ;
+			let sparql = 'SELECT DISTINCT ?q { ?q wdt:P921 wd:'+me.q+' }' ;
+			me.show_all_main_subject = false ;
+			wd.loadSPARQLitems ( sparql , function ( d ) {
+				if ( d.length == 0 ) return ;
+				me.main_subject = d ;
+				if ( d.length <= 20 ) me.loadLiteratureDetails() ;
+			} ) ;
+		} ,
+		loadGeneOntologyEvidenceCodes : function(resolve, reject) { // Global load
+			if ( typeof evidence_codes != 'undefined' ) return resolve() ; // Already loaded
+			evidence_codes = {} ;
+			let sparql = 'SELECT ?q ?desc { ?q wdt:P31 wd:Q23173209 ; skos:altLabel ?desc FILTER ( LANG(?desc)="en" ) }' ;
+			wd.loadSPARQL ( sparql , function ( d ) {
+				$.each ( d.results.bindings , function ( dummy , b ) {
+					let q = 'Q' + wd.itemFromBinding ( b.q ) ;
+					let desc = b.desc.value ;
+					if ( desc == 'evidence used in automatic assertion' ) return ;
+					if ( typeof evidence_codes[q] == 'undefined' ) evidence_codes[q] = desc ;
+				} ) ;
+				resolve() ;
+			} , reject ) ;
+		}
+	} ,
+	template:'#protein-box-template'
+} )
+</script>

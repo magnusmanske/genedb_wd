@@ -1,43 +1,3 @@
-<template id='go-list-template'>
-	<div v-if='loaded && claims.length>0' style="display:flex;flex-direction:row">
-		<div style="width:20%">
-			<wd-link :item='go_prop' as_text='1'></wd-link>
-		</div>
-		<div style="display:flex;flex-direction:column;width:80%">
-			<ul class="list-group list-group-flush">
-				<li v-for='claim in claims' class="list-group-item" style="display:flex;flex-direction:row">
-					<div style='width:20%'>
-						<wd-link :item='claim.mainsnak.datavalue.value.id' as_text='1'></wd-link>
-						<br/>
-						(
-						<span v-for='go_term in wd.getItem(claim.mainsnak.datavalue.value.id).getStringsForProperty("P686")' class='mr-1'>
-							<router-link :to='"/go/"+go_term'>{{go_term}}</router-link>
-						</span>
-						)
-					</div>
-					<div style='width:80%'>
-						<div v-for='ref in (claim.references||[])' style='display:flex;flex-direction:row;width:100%'>
-							<div style='width:30%;display:flex;flex-direction:column'>
-								<div v-for='dm in (ref.snaks.P459||[])'>
-									{{evidence_codes[dm.datavalue.value.id]}}
-								</div>
-							</div>
-							<div style='width:70%;display:flex;flex-direction:column'>
-								<div v-for='si in (ref.snaks.P248||[])'>
-									<publication :item='si.datavalue.value.id'></publication>
-									<!--<wd-link :item='si.datavalue.value.id'></wd-link>-->
-								</div>
-							</div>
-						</div>
-					</div>
-				</li>
-			</ul>
-		</div>
-	</div>
-</template>
-
-
-
 <template id='gene-template'>
 <div class='container'>
 	<tool-navbar></tool-navbar>
@@ -101,7 +61,13 @@
 						</tr>
 						<tr>
 							<td tt='product'></td>
-							<td><i>Not in Wikidata - yet!</i></td>
+							<td>
+								<div v-for='protein_q in i.getClaimItemsForProperty("P688",true)'>
+									<router-link :to='"/protein/"+protein_q'>
+										<wd-link :item='protein_q' as_textg='1'></wd-link>
+									</router-link>
+								</div>
+							</td>
 						</tr>
 						<tr>
 							<td tt='see_also'></td>
@@ -124,12 +90,11 @@
 			</div>
 		</div>
 
-		<div class="card mb-2" style="width:100%">
-			<div class="card-header" tt='curation'></div>
+		<div class="card mb-2 mt-2" style="width:100%">
+			<div class="card-header" tt='protein'></div>
 			<div class="card-body">
-				<h5 class="card-title" tt='gene_ontology'></h5>
-				<div style="display:flex;flex-direction:column;width:100%;font-size:10pt">
-					<go-list :key='go_prop' v-for='go_prop in go_props' :go_prop='go_prop' :claims='i.getClaimsForProperty(go_prop)'></go-list>
+				<div v-for='protein_q in i.getClaimItemsForProperty("P688",true)' style='width:100%'>
+					<protein-box :q='protein_q'></protein-box>
 				</div>
 			</div>
 		</div>
@@ -163,32 +128,7 @@
 <script>
 'use strict';
 
-/*
-TODO: Show all genes on the same chromsome
-For chromosome Q18967858:
-SELECT * { ?q wdt:P3382 ?genedb ; wdt:P1057 wd:Q18967858 ; wdt:P644 ?start ; wdt:P645 ?end }
-*/
 
-Vue.component ( 'go-list' , {
-	template : '#go-list-template' ,
-	props : [ 'go_prop' , 'claims' ] ,
-	data : function () { return { loaded:false } } ,
-	created : function () {
-		let me = this ;
-		let to_load = [] ;
-		$.each ( me.claims , function ( dummy , claim ) {
-			if ( typeof claim.mainsnak == 'undefined' ) return ;
-			if ( typeof claim.mainsnak.datavalue == 'undefined' ) return ;
-			let q = claim.mainsnak.datavalue.value.id ;
-			to_load.push ( q ) ;
-		} ) ;
-		wd.getItemBatch ( to_load , function () {
-			me.loaded = true ;
-		} ) ;
-	}
-} ) ;
-
-let evidence_codes ;
 
 let Gene = Vue.extend ( {
 	props : [ 'genedb_id' ] ,
@@ -204,7 +144,7 @@ let Gene = Vue.extend ( {
 		me.main_subject = [] ;
 		Promise.all ( [
 			new Promise( me.loadByGeneDB ) ,
-			new Promise( me.loadGeneOntologyEvidenceCodes )
+//			new Promise( me.loadGeneOntologyEvidenceCodes )
 		] )	.then ( () => {
 			if ( me.q != '' ) me.loadLiterature() ;
 			me.loading = false ;
@@ -236,7 +176,7 @@ let Gene = Vue.extend ( {
 		} ,
 		loadByGeneDB : function(resolve, reject) {
 			var me = this ;
-			let sparql = 'SELECT DISTINCT ?q { VALUES ?v { "'+me.genedb_id+'" "'+me.genedb_id+'.1" } . ?q wdt:P3382 ?v }' ;
+			let sparql = 'SELECT DISTINCT ?q { VALUES ?v { "'+me.genedb_id+'"  } . ?q wdt:P3382 ?v }' ; // "'+me.genedb_id+'.1"
 			wd.loadSPARQLitems ( sparql , function ( d ) {
 				if ( d.length == 0 ) {
 					me.error_message = "No such gene '" + me.genedb_id + "' on Wikidata" ;
@@ -260,6 +200,7 @@ let Gene = Vue.extend ( {
 				}
 			} , reject ) ;
 		} ,
+/*
 		loadGeneOntologyEvidenceCodes : function(resolve, reject) { // Global load
 			if ( typeof evidence_codes != 'undefined' ) return resolve() ; // Already loaded
 			evidence_codes = {} ;
@@ -274,6 +215,7 @@ let Gene = Vue.extend ( {
 				resolve() ;
 			} , reject ) ;
 		}
+*/
 	} ,
 	template:'#gene-template'
 } )
