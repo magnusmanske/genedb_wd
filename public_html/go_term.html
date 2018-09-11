@@ -3,7 +3,8 @@
 	<tool-navbar></tool-navbar>
 	<div v-if='loading' class='row'><i>Loading...</i></div>
 	<div v-else class='row'>
-		<div class='lead'>
+		<h3 class='col-12'>{{go_i.getLabel()}}</h3>
+		<div class='lead col-12'>
 			Genes with GO term 
 			<a :href='"http://amigo.geneontology.org/amigo/term/"+go_term' class='external' target="_blank">{{go_term}}</a>
 			 and GeneDB in Wikidata
@@ -37,51 +38,62 @@
 
 let GoTerm = Vue.extend ( {
 	props : [ 'go_term' ] ,
-	data : function () { return { loading:true , results:{} } } ,
+	data : function () { return { loading:true , results:{} , go_q:'' , go_i:{} } } ,
 	created : function () {
 		var me = this ;
-		let sparql = 'SELECT DISTINCT ?q ?go ?genedb ?species ?chromosome ?start ?end { VALUES ?props { wdt:P680 wdt:P681 wdt:P682 } . ?q wdt:P3382 ?genedb ; wdt:P688 ?q_protein . ?q_protein ?props ?go . ?go wdt:P686 "' + me.go_term.toUpperCase() + '" OPTIONAL { ?q wdt:P703 ?species } OPTIONAL { ?q wdt:P1057 ?chromosome } OPTIONAL { ?q wdt:P644 ?start } OPTIONAL { ?q wdt:P645 ?end } } ORDER BY ?genedb' ;
-		wd.loadSPARQL ( sparql , function ( d ) {
-			let to_load = [] ;
-			$.each ( d.results.bindings , function ( dummy , b ) {
-				let q_gene = b.q.value.replace(/^.+\/Q/,'Q') ;
-				let q_go = b.go.value.replace(/^.+\/Q/,'Q') ;
-				let gene_db = b.genedb.value ;
-				let q_species = 'unknown' ;
-				let q_chromosome = '' ;
-				if ( typeof b.species != 'undefined' ) q_species = b.species.value.replace(/^.+\/Q/,'Q') ;
-				if ( typeof b.chromosome != 'undefined' ) q_chromosome = b.chromosome.value.replace(/^.+\/Q/,'Q') ;
-				if ( typeof me.results[q_go] == 'undefined' ) me.results[q_go] = {} ;
-				if ( typeof me.results[q_go][q_species] == 'undefined' ) me.results[q_go][q_species] = {} ;
-				if ( typeof me.results[q_go][q_species][q_chromosome] == 'undefined' ) me.results[q_go][q_species][q_chromosome] = [] ;
-				let gene = { q:q_gene , genedb:gene_db } ;
-				if ( typeof b.start != 'undefined' ) gene.start = b.start.value*1 ;
-				if ( typeof b.end != 'undefined' ) gene.end = b.end.value*1 ;
-				me.results[q_go][q_species][q_chromosome].push ( gene ) ;
-				to_load.push ( q_gene ) ;
-				to_load.push ( q_go ) ;
-				to_load.push ( q_chromosome ) ;
-				if ( q_species != '' ) to_load.push ( q_species ) ;
-			} ) ;
-			wd.getItemBatch ( to_load , function () {
-				$.each ( me.results , function ( q_go , species_chromosomes ) {
-					$.each ( species_chromosomes , function ( species , genes_chromosomes ) {
-						$.each ( genes_chromosomes , function ( q_chromosome , genes ) {
-							genes.sort ( function ( a , b ) { return a.start*1 - b.start*1 } ) ;
-							$.each ( genes , function ( dummy , gene ) {
-								gene.i = wd.getItem ( gene.q ) ;
-							} ) ;
-						} ) ;
-					} ) ;
-				} ) ;
-				me.loading = false ;
+		let sparql = 'SELECT DISTINCT ?q { ?q wdt:P686 "' + me.go_term.toUpperCase() + '" }' ;
+		wd.loadSPARQLitems ( sparql , function ( d ) {
+			me.go_q = d[0] ;
+			wd.getItemBatch ( [me.go_q] , function () {
+				me.go_i = wd.getItem ( me.go_q ) ;
+				me.loadGenes() ;
 			} ) ;
 		} ) ;
-
 	} ,
 	updated : function () { tt.updateInterface(this.$el) ; } ,
 	mounted : function () { tt.updateInterface(this.$el) ; } ,
 	methods : {
+		loadGenes : function () {
+			var me = this ;
+			let sparql = 'SELECT DISTINCT ?q ?go ?genedb ?species ?chromosome ?start ?end { VALUES ?props { wdt:P680 wdt:P681 wdt:P682 } . ?q wdt:P3382 ?genedb ; wdt:P688 ?q_protein . ?q_protein ?props ?go . ?go wdt:P686 "' + me.go_term.toUpperCase() + '" OPTIONAL { ?q wdt:P703 ?species } OPTIONAL { ?q wdt:P1057 ?chromosome } OPTIONAL { ?q wdt:P644 ?start } OPTIONAL { ?q wdt:P645 ?end } } ORDER BY ?genedb' ;
+			wd.loadSPARQL ( sparql , function ( d ) {
+				let to_load = [] ;
+				$.each ( d.results.bindings , function ( dummy , b ) {
+					let q_gene = b.q.value.replace(/^.+\/Q/,'Q') ;
+					let q_go = b.go.value.replace(/^.+\/Q/,'Q') ;
+					let gene_db = b.genedb.value ;
+					let q_species = 'unknown' ;
+					let q_chromosome = '' ;
+					if ( typeof b.species != 'undefined' ) q_species = b.species.value.replace(/^.+\/Q/,'Q') ;
+					if ( typeof b.chromosome != 'undefined' ) q_chromosome = b.chromosome.value.replace(/^.+\/Q/,'Q') ;
+					if ( typeof me.results[q_go] == 'undefined' ) me.results[q_go] = {} ;
+					if ( typeof me.results[q_go][q_species] == 'undefined' ) me.results[q_go][q_species] = {} ;
+					if ( typeof me.results[q_go][q_species][q_chromosome] == 'undefined' ) me.results[q_go][q_species][q_chromosome] = [] ;
+					let gene = { q:q_gene , genedb:gene_db } ;
+					if ( typeof b.start != 'undefined' ) gene.start = b.start.value*1 ;
+					if ( typeof b.end != 'undefined' ) gene.end = b.end.value*1 ;
+					me.results[q_go][q_species][q_chromosome].push ( gene ) ;
+					to_load.push ( q_gene ) ;
+					to_load.push ( q_go ) ;
+					to_load.push ( q_chromosome ) ;
+					if ( q_species != '' ) to_load.push ( q_species ) ;
+				} ) ;
+				wd.getItemBatch ( to_load , function () {
+					$.each ( me.results , function ( q_go , species_chromosomes ) {
+						$.each ( species_chromosomes , function ( species , genes_chromosomes ) {
+							$.each ( genes_chromosomes , function ( q_chromosome , genes ) {
+								genes.sort ( function ( a , b ) { return a.start*1 - b.start*1 } ) ;
+								$.each ( genes , function ( dummy , gene ) {
+									gene.i = wd.getItem ( gene.q ) ;
+								} ) ;
+							} ) ;
+						} ) ;
+					} ) ;
+					me.loading = false ;
+				} ) ;
+			} ) ;
+
+		} ,
 	} ,
 	template : '#go-term-template'
 } ) ;
