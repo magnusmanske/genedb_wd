@@ -117,7 +117,12 @@
 	</div>
 	<div v-else class='row'>
 		<div v-if='possible_items.length>0'>
-			{{possible_items}}
+			WIKIDATA PROBLEM: This gene appears to exist as 
+			<ul>
+				<li v-for='pq in possible_items'>
+					<wd-link :item='pq'></wd-link>
+				</li>
+			</ul>
 		</div>
 		<div v-else>
 			ERROR: <tt>{{error_message}}</tt>
