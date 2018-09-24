@@ -7,7 +7,8 @@
 	<div v-else-if='query==""'></div>
 	<div v-else-if='results.length==0'><i>No results found</i></div>
 	<div v-else>
-		<gene-list :genes='genes' show_chromosome='1'></gene-list>
+		<hr/>
+		<gene-list :genes='genes' show_chromosome='1' show_species='1'></gene-list>
 		<div v-if='results.length==50' style='display:block'><i>Potentially more results</i></div>
 	</div>
 </div>
@@ -70,6 +71,7 @@ Vue.component ( 'gene-search-box' , {
 				if ( i.hasClaims('P3382') ) gene.genedb = i.getFirstStringForProperty('P3382') ;
 				if ( i.hasClaims('P644') ) gene.start = i.getFirstStringForProperty('P644')*1 ;
 				if ( i.hasClaims('P645') ) gene.end = i.getFirstStringForProperty('P645')*1 ;
+				if ( i.hasClaims('P703') ) gene.species = i.getClaimItemsForProperty('P703',true)[0] ;
 				me.genes.push ( gene ) ;
 			} ) ;
 		}

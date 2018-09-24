@@ -1,0 +1,6 @@
+{
+	"species" : {
+		"Pf" : { "species":"Q311383" , "file_root":"Pfalciparum" , "genomic_assembly":"Q18968099" } ,
+		"Pr" : { "species":"Q19730945" , "file_root":"Preichenowi" , "genomic_assembly":"Q56707230" }
+	}
+}

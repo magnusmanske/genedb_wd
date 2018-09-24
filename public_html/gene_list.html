@@ -9,6 +9,7 @@
 				<th tt='gene_start'></th>
 				<th tt='gene_end'></th>
 				<th v-if='show_chromosome' tt='chromosome'></th>
+				<th v-if='show_species' tt='species'></th>
 			</tr>
 		</thead>
 		<tbody>
@@ -31,6 +32,9 @@
 						<wd-link :item='gene.q_chromosome' as_text='1'></wd-link>
 					</router-link>
 				</td>
+				<td v-if='show_species'>
+					<wd-link v-if='typeof gene.species!="undefined"' :item='gene.species'></wd-link>
+				</td>
 			</tr>
 		</tbody>
 	</table>
@@ -42,7 +46,7 @@
 
 Vue.component ( 'gene-list' , {
 	template : '#gene-list-template' ,
-	props : [ 'genes' , 'show_chromosome' ] ,
+	props : [ 'genes' , 'show_chromosome' , 'show_species' ] ,
 	data : function () { return {} } ,
 	updated : function () { tt.updateInterface(this.$el) ; } ,
 	mounted : function () { tt.updateInterface(this.$el) ; } ,
