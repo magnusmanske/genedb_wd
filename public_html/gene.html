@@ -63,16 +63,17 @@
 							<td tt='product'></td>
 							<td>
 								<div v-for='protein_q in i.getClaimItemsForProperty("P688",true)'>
-									<router-link :to='"/protein/"+protein_q'>
+									<wd-link :item='protein_q'></wd-link>
+<!--									<router-link :to='"/protein/"+protein_q'>
 										<wd-link :item='protein_q' as_textg='1'></wd-link>
-									</router-link>
+									</router-link>-->
 								</div>
 							</td>
 						</tr>
-						<tr>
+<!--						<tr>
 							<td tt='see_also'></td>
 							<td><i>Not in Wikidata - yet!</i></td>
-						</tr>
+						</tr>-->
 						<tr>
 							<td tt='plasmodb'></td>
 							<td><a target='_blank' class='external' :href='"http://plasmodb.org/gene/"+genedb_id'>{{genedb_id}}</a></td>
@@ -90,7 +91,7 @@
 			</div>
 		</div>
 
-		<div class="card mb-2 mt-2" style="width:100%">
+		<div v-if='i.hasClaims("P688")' class="card mb-2 mt-2" style="width:100%">
 			<div class="card-header" tt='protein'></div>
 			<div class="card-body">
 				<div v-for='protein_q in i.getClaimItemsForProperty("P688",true)' style='width:100%'>
