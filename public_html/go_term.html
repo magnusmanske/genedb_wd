@@ -5,26 +5,25 @@
 	<div v-else class='row'>
 		<h3 class='col-12'>{{go_i.getLabel()}}</h3>
 		<div class='lead col-12'>
-			Genes with GO term 
+			Genes for proteins with GO term 
 			<a :href='"http://amigo.geneontology.org/amigo/term/"+go_term' class='external' target="_blank">{{go_term}}</a>
 			 and GeneDB in Wikidata
 		</div>
-		<div v-for='(by_species,q_go) in results' class="card mb-2 mt-2" style="width:100%">
-			<div class="card-header" tt='general_information'>
-				<wd-link :item='q_go'></wd-link> <small>[{{q_go}}]</small>
-			</div>
-			<div v-for='(genes_chromosomes,q_species) in by_species' class="card-body">
-				<h5 class="card-title">
-					<wd-link :item='q_species'></wd-link>
-				</h5>
-				<div v-for='(genes,q_chromosome) in genes_chromosomes'>
-					<div class='lead'>
-						<span tt='chromosome'></span>
-						<router-link :to='"/chromosome/"+q_chromosome'>
-							<wd-link :item='q_chromosome' as_text='1'></wd-link>
-						</router-link>
+		<div v-for='(by_species,q_go) in results' style="width:100%">
+			<div v-for='(genes_chromosomes,q_species) in by_species' class="card mb-2 mt-2" style="width:100%">
+				<div class="card-header">
+					<h5><wd-link :item='q_species'></wd-link></h5>
+				</div>
+				<div class="card-body">
+					<div v-for='(genes,q_chromosome) in genes_chromosomes'>
+						<div class='lead'>
+							<span tt='chromosome'></span>
+							<router-link :to='"/chromosome/"+q_chromosome'>
+								<wd-link :item='q_chromosome' as_text='1'></wd-link>
+							</router-link>
+						</div>
+						<gene-list :genes='genes'></gene-list>
 					</div>
-					<gene-list :genes='genes'></gene-list>
 				</div>
 			</div>
 		</div>

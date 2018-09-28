@@ -16,7 +16,7 @@
 					<tbody>
 						<tr>
 							<td tt='systematic_name' nowrap></td>
-							<td>
+							<td style='width:100%'>
 								<i>{{genedb_id}}</i>
 								<br/><span v-if='data.aliases.length>0' tt='previously_known_as' :tt1='data.aliases.join(", ")'></span>
 							</td>
@@ -95,6 +95,16 @@
 			</div>
 		</div>
 
+		<div v-if='Object.keys(orthologs).length>0' class="card mb-2 mt-2" style="width:100%">
+			<div class="card-header" tt='orthologs'></div>
+			<div class="card-body">
+				<div v-for='(orth_genes,taxon_q) in orthologs' style='width:100%'>
+					<wd-link :item='taxon_q'></wd-link>
+					<gene-list :genes='orth_genes'></gene-list>
+				</div>
+			</div>
+		</div>
+
 		<div v-if='i.hasClaims("P688")' class="card mb-2 mt-2" style="width:100%">
 			<div class="card-header" tt='protein'></div>
 			<div class="card-body">
@@ -146,6 +156,7 @@ let Gene = Vue.extend ( {
 		aliases:[] ,
 		type:''
 	} ,
+	orthologs : {} ,
 	species2apollo : { 'Q311383':'7383' } ,
 	apollo_url : '' ,
 	go_props : ["P680","P681","P682"] ,
@@ -211,6 +222,7 @@ let Gene = Vue.extend ( {
 		loadByGeneDB : function(resolve, reject) {
 			var me = this ;
 			let sparql = 'SELECT DISTINCT ?q { VALUES ?v { "'+me.genedb_id+'"  } . ?q wdt:P3382 ?v }' ; // "'+me.genedb_id+'.1"
+			me.orthologs = {} ;
 			wd.loadSPARQLitems ( sparql , function ( d ) {
 				if ( d.length == 0 ) {
 					me.error_message = "No such gene '" + me.genedb_id + "' on Wikidata" ;
@@ -226,6 +238,7 @@ let Gene = Vue.extend ( {
 							me.error_message = "Failed to load '" + me.q + "' from Wikidata API" ;
 							reject() ;
 						} else {
+							me.loadOrthologs () ;
 							me.data.aliases = Object.values ( me.i.getAliasesForLanguage("en") ) ;
 							me.loaded = true ;
 							resolve() ;
@@ -233,6 +246,32 @@ let Gene = Vue.extend ( {
 					} ) ;
 				}
 			} , reject ) ;
+		} ,
+		loadOrthologs : function () { // Assumes me.q and me.i are valid
+			var me = this ;
+			if ( !me.i.hasClaims('P684') ) return ;
+			let sparql = 'SELECT ?orth ?taxon ?genedb ?chromosome ?start ?end { wd:' + me.q + ' wdt:P684 ?orth . ?orth wdt:P703 ?taxon ; wdt:P3382 ?genedb. OPTIONAL { ?orth wdt:P1057 ?chromosome } OPTIONAL { ?orth wdt:P644 ?start } OPTIONAL { ?orth wdt:P645 ?end } }' ;
+			wd.loadSPARQL ( sparql , function ( d ) {
+				let orth = {} ;
+				let to_load = [] ;
+				$.each ( d.results.bindings , function ( dummy , b ) {
+					let gene = {} ;
+					gene.q = wd.itemFromBinding ( b.orth ) ;
+					gene.genedb = b.genedb.value ;
+					if ( typeof b.start != 'undefined' ) gene.start = b.start.value*1 ;
+					if ( typeof b.end != 'undefined' ) gene.end = b.end.value*1 ;
+					if ( typeof b.chromosome != 'undefined' ) gene.chromosome = wd.itemFromBinding ( b.chromosome ) ;
+					let taxon_q = wd.itemFromBinding ( b.taxon ) ;
+					if ( typeof orth[taxon_q] == 'undefined' ) orth[taxon_q] = [] ;
+					orth[taxon_q].push ( gene ) ;
+					to_load.push ( gene.q ) ;
+					to_load.push ( taxon_q ) ;
+				} )
+				wd.getItemBatch ( to_load , function () {
+					me.orthologs = orth ;
+				} ) ;
+			} ) ;
+
 		} ,
 /*
 		loadGeneOntologyEvidenceCodes : function(resolve, reject) { // Global load
