@@ -13,7 +13,9 @@ if ( count($items) == 0 ) {
 	die("");
 }
 
-header('Location: ./#/gene/'.$gene);
+http_response_code(200);
+print '<html<head><meta http-equiv="refresh" content="0; url=./#/gene/'.$gene.'" /></head></html>' ;
+#header('Location: ./#/gene/'.$gene);
 exit(0);
 
 ?>
