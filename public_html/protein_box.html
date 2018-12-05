@@ -15,8 +15,14 @@
 						</span>
 						)
 					</div>
-					<div style='width:80%'>
-						<div v-for='ref in (claim.references||[])' style='display:flex;flex-direction:row;width:100%'>
+					<div style='width:80%;display:flex;flex-direction:column;'>
+						<div v-for='(qualifiers,qprop) in (claim.qualifiers||{})' style='display:flex;flex-direction:row;width:100%'>
+							<div v-if='qprop=="P459"' v-for='qual in qualifiers'>
+								<wd-link item='P459' as_text='1'></wd-link>: 
+								<wd-link :item='qual.datavalue.value.id'></wd-link>
+							</div>
+						</div>
+						<div v-for='ref in (claim.references||[])' style='width:100%'>
 							<div style='width:30%;display:flex;flex-direction:column'>
 								<div v-for='dm in (ref.snaks.P459||[])'>
 									{{evidence_codes[dm.datavalue.value.id]}}
