@@ -3,6 +3,7 @@
 	<tool-navbar></tool-navbar>
 	<div v-if='loading' class='row'><i>Loading...</i></div>
 	<div v-else-if='loaded' class='row'>
+		<chromosome-plot :gene_q='q' :chromosome_q='(i.getClaimItemsForProperty("1057",true))[0]'></chromosome-plot>
 		<div class="card mb-2 mt-2" style="width:100%">
 			<div class="card-header" tt='general_information'></div>
 			<div class="card-body">

@@ -1,0 +1,75 @@
+<style>
+.gene_box {
+	top:0px;
+	height:10px;
+	position:absolute;
+	border:1px solid #F7DE00;
+	cursor:pointer;
+}
+.gene_box_current {
+	top:0px;
+	height:21px;
+	position:absolute;
+	border:1px solid red;
+	cursor:pointer;
+	z-index:1;
+}
+</style>
+
+<template id='chromosome-plot'>
+<div v-if='loaded' style='width:100%;height:28px;border:1px solid #DDD;padding:3px;position:relative;margin-top:5px;'>
+	<div style='position:relative;height:10px;border-bottom:1px solid #DDD;'>
+		<div v-for='g in genes' v-if='g.q==gene_q' :key='"main_genebox_"+g.q' :style='renderGeneBox(g)' class='gene_box_current' :title='g.label' @click.prevent='loadGene(g)'></div>
+		<div v-for='g in genes' v-if='g.strand=="Q22809680"' :key='"genebox_"+g.q' :style='renderGeneBox(g)' class='gene_box' :title='g.label' @click.prevent='loadGene(g)'></div>
+	</div>
+	<div style='position:relative;height:10px;'>
+		<div v-for='g in genes' v-if='g.strand=="Q22809711"' :key='"genebox_"+g.q' :style='renderGeneBox(g)' class='gene_box' :title='g.label' @click.prevent='loadGene(g)'></div>
+	</div>
+</div>
+</template>
+
+<script>
+'use strict';
+
+Vue.component ( 'chromosome-plot' , {
+	props : [ 'chromosome_q' , 'gene_q' ] ,
+	data : function () { return { loaded:false , genes:[] , chr_len:0 } } ,
+	created : function () {
+		let me = this ;
+		if ( typeof me.chromosome_q == 'undefined' ) return ;
+		let sparql = 'SELECT ?gene ?geneLabel ?genedb ?start ?end ?strand { ?gene wdt:P31|wdt:P279 wd:Q7187 ; wdt:P3382 ?genedb ; wdt:P1057 wd:'+me.chromosome_q+' ; wdt:P644 ?start ; wdt:P645 ?end ; wdt:P2548 ?strand . SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en" } } ORDER BY (?start*1)' ;
+		wd.loadSPARQL ( sparql , function ( d ) {
+			me.genes = [] ;
+			me.chr_len = 0 ;
+			$.each ( d.results.bindings , function ( dummy , b ) {
+				let o = {
+					q : wd.itemFromBinding ( b.gene ) ,
+					label : b.geneLabel.value ,
+					genedb : b.genedb.value ,
+					start : b.start.value*1 ,
+					end : b.end.value*1 ,
+					strand : wd.itemFromBinding ( b.strand )
+				} ;
+				if ( o.end > me.chr_len ) me.chr_len = o.end ; // This should be the "proper" chromosome size, but for now, this hack will do...
+				me.genes.push ( o ) ;
+			} ) ;
+			me.loaded = true ;
+//			console.log ( JSON.parse ( JSON.stringify ( me.genes ))) ;
+		} ) ;
+	},
+	updated : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	methods : {
+		loadGene : function ( g ) {
+			this.$router.push ( '/gene/'+g.genedb );
+		} ,
+		renderGeneBox : function ( g ) {
+			return {
+				left:(100*g.start/this.chr_len)+'%' ,
+				width:(100*(g.end-g.start)/this.chr_len)+'%'
+			} ;
+		}
+	} ,
+	template:'#chromosome-plot'
+} )
+</script>

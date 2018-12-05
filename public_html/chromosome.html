@@ -3,6 +3,7 @@
 	<tool-navbar></tool-navbar>
 	<div v-if='loading' class='row'><i>Loading...</i></div>
 	<div v-else class='row'>
+		<chromosome-plot :chromosome_q='q_chromosome'></chromosome-plot>
 		<div class='lead'>
 			Genes on chromosome <wd-link :item='q_chromosome'></wd-link> with GeneDB
 		</div>
