@@ -48,7 +48,6 @@ class GFF2WD {
 		$commands[] = "LAST\tLen\t\"{$chr}\"" ;
 		$commands[] = "LAST\tP31\tQ37748" ; # Chromosome
 		$commands[] = "LAST\tP703\t{$this->gffj->species}" ;
-print_r ( $commands ) ;
 		$q = $this->tfc->runCommandsQS ( $commands , $this->qs ) ;
 		if ( !isset($q) or $q == '' ) die ( "Could not create item for chromosome '{$chr}'\n" ) ;
 		$this->gffj->chr2q[$chr] = $q ;
