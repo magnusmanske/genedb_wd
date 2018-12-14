@@ -40,6 +40,21 @@ class GFF2WD {
 		$this->run() ;
 	}
 
+	function getQforChromosome ( $chr ) {
+		if ( isset($this->gffj->chr2q[$chr]) ) return $this->gffj->chr2q[$chr] ;
+
+		$commands = [] ;
+		$commands[] = 'CREATE' ;
+		$commands[] = "LAST\tLen\t\"{$chr}\"" ;
+		$commands[] = "LAST\tP31\tQ37748" ; # Chromosome
+		$commands[] = "LAST\tP703\t{$this->gffj->species}" ;
+print_r ( $commands ) ;
+		$q = $this->tfc->runCommandsQS ( $commands , $this->qs ) ;
+		if ( !isset($q) or $q == '' ) die ( "Could not create item for chromosome '{$chr}'\n" ) ;
+		$this->gffj->chr2q[$chr] = $q ;
+		return $q ;
+	}
+
 	function loadBasicItems () {
 		# Load basic items (species, chromosomes)
 		$items = $this->tfc->getSPARQLitems ( "SELECT ?q { ?q wdt:P31 wd:Q37748 ; wdt:P703 wd:{$this->gffj->species} }" ) ;
@@ -121,7 +136,7 @@ class GFF2WD {
 		while ( $r = $gff->nextEntry() ) {
 			if ( isset($r['comment']) ) continue ;
 			if ( !in_array ( $r['type'] , ['gene','mRNA'] ) ) continue ;
-			if ( !isset($this->gffj->chr2q[$r['seqid']]) ) continue ; # Paranoia
+#			if ( !isset($this->gffj->chr2q[$r['seqid']]) ) continue ; # Paranoia
 			if ( isset($r['attributes']['Parent']) ) $this->genes[$r['attributes']['Parent']][$r['type']][] = $r ;
 			else $this->genes[$r['attributes']['ID']]['gene'] = $r ;
 			if ( isset($r['attributes']['orthologous_to']) ) {
@@ -154,8 +169,8 @@ class GFF2WD {
 		if ( !isset($gene['attributes']) ) die ( "No attributes for gene\n".json_encode($g)."\n" ) ;
 		$genedb_id = $gene['attributes']['ID'] ;
 
-		if ( !isset($this->gffj->chr2q[$gene['seqid']]) ) die ( "Chromosome {$gene['seqid']} for {$genedb_id} not found\n" ) ;
-		$chr_q = $this->gffj->chr2q[$gene['seqid']] ;
+#		if ( !isset($this->gffj->chr2q[$gene['seqid']]) ) die ( "Chromosome {$gene['seqid']} for {$genedb_id} not found\n" ) ;
+		$chr_q = $this->getQforChromosome ( $gene['seqid'] ) ; #$this->gffj->chr2q[$gene['seqid']] ;
 
 		$commands = [] ;
 		if ( isset($this->genedb2q[$genedb_id]) ) {
