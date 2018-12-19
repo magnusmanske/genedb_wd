@@ -99,10 +99,6 @@
 								<router-link :to='"/gene/"+gene_genedb_id'>{{gene_genedb_id}}</router-link>
 							</td>
 						</tr>
-						<tr>
-							<td tt='genedb'></td>
-							<td><a target='_blank' class='external' :href='"http://www.genedb.org/gene/"+genedb_id'>{{genedb_id}}</a></td>
-						</tr>
 						<tr v-for='pid in external_ids' v-if='i.hasClaims(pid)'>
 							<td>{{wd.getItem(pid).getLabel()}}</td>
 							<td><a :href="wd.getItem(pid).getFirstStringForProperty('P1630').replace('$1',i.getFirstStringForProperty(pid))" class='external' target='_blank'>{{i.getFirstStringForProperty(pid)}}</a></td>
