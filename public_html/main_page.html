@@ -1,9 +1,9 @@
 <template id='main-page-template'>
 <div class='container'>
-	<tool-navbar></tool-navbar>
+	<genedb-header></genedb-header>
 	<div class='row'>
 		<div class='lead col-12'>
-			A demo version of GeneDB, based on Wikidata.
+			A version of GeneDB, based on Wikidata.
 		</div>
 	</div>
 	<div style='float:right' v-if='by_species.length>0'>
@@ -45,6 +45,7 @@
 			<gene-search-box></gene-search-box>
 		</div>
 	</div>
+	<genedb-footer></genedb-footer>
 </div>
 </template>
 

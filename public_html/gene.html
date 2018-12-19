@@ -1,6 +1,6 @@
 <template id='gene-template'>
 <div class='container'>
-	<tool-navbar></tool-navbar>
+	<genedb-header></genedb-header>
 	<div v-if='loading' class='row'><i>Loading...</i></div>
 	<div v-else-if='loaded' class='row'>
 		<chromosome-plot :gene_q='q' :chromosome_q='(i.getClaimItemsForProperty("1057",true))[0]'></chromosome-plot>
@@ -143,6 +143,7 @@
 			ERROR: <tt>{{error_message}}</tt>
 		</div>
 	</div>
+	<genedb-footer></genedb-footer>
 </div>
 </template>
 

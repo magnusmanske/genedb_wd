@@ -2,6 +2,8 @@
 	"species" : {
 		"Pf" : { "species":"Q311383" , "file_root":"Pfalciparum" , "genomic_assembly":"Q18968099" } ,
 		"Pr" : { "species":"Q19730945" , "file_root":"Preichenowi" , "genomic_assembly":"Q56707230" } ,
-		"Pv" : { "species":"Q311376" , "file_root":"PvivaxP01" , "genomic_assembly":"Q59716615" }
+		"Pv" : { "species":"Q311376" , "file_root":"PvivaxP01" , "genomic_assembly":"Q59716615" } ,
+		"Pb" : { "species":"Q65021" , "file_root":"Pberghei" , "genomic_assembly":"Q59904989" } ,
+		"Po" : { "species":"Q134445" , "file_root":"Povale" , "genomic_assembly":"Q59859177" }
 	}
 }

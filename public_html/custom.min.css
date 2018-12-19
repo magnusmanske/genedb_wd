@@ -1,0 +1,40 @@
+body{font-family:Tahoma,Verdana,sans-serif!important;background:#999}
+h1{font-size:1.8em;color:#004797}
+h3{font-size:1.2em;color:#4c4c4c}
+a{color:#004797}
+.row{padding:1rem}
+.container-fluid{padding:0}
+.bg-light-grey{background:#dedede}
+.border-dark-grey{border:1px solid rgba(0,0,0,.125)}
+.bg-light-blue{background:#cbdcec}
+.border-rounded{border-radius:.5rem!important;border:1px solid rgba(0,0,0,.125)}
+.card-sub-title{color:#004797}
+.card-link-icon{margin-right:5px}
+.navbar{background:linear-gradient(#4e95c2,#396f90);border-radius:.5rem!important}
+.navbar-header .navbar-brand{padding:15px 0;width:100%}
+.navbar-header .navbar-brand>img{padding:18px 0;width:280px}
+.navbar-nav{padding-left:15px}
+@media screen and (max-width:289px){.navbar-header .navbar-brand>img{width:95%}}
+.navbar-dark .navbar-nav .nav-link{color:rgba(255,255,255,.85)}
+.navbar-dark .navbar-nav .nav-link:hover,.navbar-dark .navbar-nav .nav-link:focus{color:rgba(180,213,240,.9)}
+.dropdown-menu{margin-top:7px}
+.dropdown-item:hover,.dropdown-item:focus{color:#fff;text-decoration:none;background-color:#396f90}
+.main-content{padding:30px 0}
+.main-content-panel{padding-bottom:30px}
+.main-content-panel span,.main-content-panel-last span{clear:both;display:block}
+.main-content-panel-last{padding-bottom:0px!important}
+.main-content .dataset-panel{margin:30px}
+.dataset-panel img{width:40%}
+.dataset-panel .input-group{width:80%;margin-left:10%}
+.dataset-panel select{border:1px solid #111}
+.dataset-panel a.btn{border:1px solid #111;margin-left:-1px;border-top-left-radius:0;border-bottom-left-radius:0}
+.default-content{margin-top:20px}
+.container{-webkit-box-shadow:0 0 30px 0 #3F3F3F;box-shadow:0 0 30px 0 #3F3F3F;background:#FFF}
+.faq-header{margin-bottom:0;font-weight:700}
+.faq-content ol li{margin-bottom:1rem}
+.faq-content p{text-align:justify}
+.acknowledgement-table{margin:10px 0}
+.acknowledgement-table td{padding:10px 30px 10px 0}
+.footer-container{padding-bottom:40px;font-size:.85rem;clear:right}
+.footer-content{padding:16px 16px 0 16px}
+.footer-panel{padding-left:0 30px}
