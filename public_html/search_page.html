@@ -17,7 +17,10 @@
 let SearchPage = Vue.extend ( {
 	props : [ 'query' ] ,
 	updated : function () { tt.updateInterface(this.$el) ; } ,
-	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () {
+		$('.hide_on_search_page').remove() ;
+		tt.updateInterface(this.$el) ;
+	} ,
 	data : function () { return {} } ,
 	methods : {
 	} ,

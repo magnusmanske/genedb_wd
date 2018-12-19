@@ -1,9 +1,10 @@
 <template id='gene-search-box-template'>
 <div>
 	<div>
-		<input type='text' v-model='query' @keyup='onQueryChange' id='gene_search_box' tt_placeholder='ph_gene_search' style='width:300px;' autofocus />
+		<input type='text' v-model='query' @keyup='onQueryChange' id='gene_search_box' tt_placeholder='ph_gene_search' style='width:300px;' @keyup.enter='onEnter' autofocus accesskey='f' />
 	</div>
-	<div v-if='searching'>...</div>
+	<div v-if='open_search_page'></div>
+	<div v-else-if='searching'>...</div>
 	<div v-else-if='query==""'></div>
 	<div v-else-if='results.length==0'><i>No results found</i></div>
 	<div v-else>
@@ -19,11 +20,12 @@
 
 Vue.component ( 'gene-search-box' , {
 	template : '#gene-search-box-template' ,
-	props : [ 'initial_query' ] ,
+	props : [ 'initial_query' , 'open_search_page' ] ,
 	data : function () { return { query:'' , results:[] , timeout:'' , query_cache:{} , searching:false , genes:[] , last_query:'' } } ,
 	mounted : function () {
 		let me = this ;
 		setTimeout ( function () {
+			if ( me.open_search_page ) return ;
 			$('#gene_search_box').focus() ;
 			if ( typeof me.initial_query == 'undefined' || me.initial_query == '' ) return ;
 			me.query = me.initial_query ;
@@ -33,8 +35,17 @@ Vue.component ( 'gene-search-box' , {
 	methods : {
 		onQueryChange : function () {
 			var me = this ;
+			if ( me.open_search_page ) return ; // No preview search if search opens on new page
 			clearTimeout ( me.timeout ) ;
 			me.timeout = setTimeout ( me.doSearch , 500 ) ;
+		} ,
+		onEnter : function () {
+			if ( this.open_search_page ) {
+				let the_query = $.trim(this.query) ;
+				this.$router.push ( '/search/'+the_query) ;
+				return ;
+			}
+
 		} ,
 		doSearch : function () {
 			var me = this ;

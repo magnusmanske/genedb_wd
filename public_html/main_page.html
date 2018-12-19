@@ -68,6 +68,9 @@ let MainPage = Vue.extend ( {
 			me.by_species = sd ;
 		} ) ;
 	} ,
+	mounted : function () {
+		$('.hide_on_main_page').remove() ;
+	} ,
 	methods : {
 	} ,
 	template : '#main-page-template'
