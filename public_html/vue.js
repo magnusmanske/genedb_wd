@@ -13,6 +13,7 @@ $(document).ready ( function () {
 			'genedb_header.html',
 			'genedb_footer.html',
 			'main_page.html',
+			'search_page.html',
 			'gene_list.html',
 			'gene.html',
 			'go_term.html',
@@ -26,6 +27,8 @@ $(document).ready ( function () {
 			  { path: '/', component: MainPage , props:true },
 			  { path: '/gene/:genedb_id', component: Gene , props:true },
 			  { path: '/go/:go_term', component: GoTerm , props:true },
+			  { path: '/search', component: SearchPage , props:true },
+			  { path: '/search/:query', component: SearchPage , props:true },
 			  { path: '/chromosome/:q_chromosome', component: Chromosome , props:true },
 			] ;
 			router = new VueRouter({routes}) ;

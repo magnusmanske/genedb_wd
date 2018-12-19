@@ -1,0 +1,26 @@
+<template id='search-page-template'>
+<div class='container'>
+	<genedb-header></genedb-header>
+	<div class='row'>
+		<h2 tt='search'></h2>
+	</div>
+	<div class='row'>
+		<gene-search-box :initial_query='query'></gene-search-box>
+	</div>
+	<genedb-footer></genedb-footer>
+</div>
+</template>
+
+<script>
+'use strict';
+
+let SearchPage = Vue.extend ( {
+	props : [ 'query' ] ,
+	updated : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	data : function () { return {} } ,
+	methods : {
+	} ,
+	template:'#search-page-template'
+} )
+</script>

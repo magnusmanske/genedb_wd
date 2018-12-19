@@ -19,9 +19,16 @@
 
 Vue.component ( 'gene-search-box' , {
 	template : '#gene-search-box-template' ,
+	props : [ 'initial_query' ] ,
 	data : function () { return { query:'' , results:[] , timeout:'' , query_cache:{} , searching:false , genes:[] , last_query:'' } } ,
 	mounted : function () {
-		setTimeout ( function () { $('#gene_search_box').focus()} , 100 ) ;
+		let me = this ;
+		setTimeout ( function () {
+			$('#gene_search_box').focus() ;
+			if ( typeof me.initial_query == 'undefined' || me.initial_query == '' ) return ;
+			me.query = me.initial_query ;
+			me.onQueryChange() ;
+		} , 100 ) ;
 	} ,
 	methods : {
 		onQueryChange : function () {
