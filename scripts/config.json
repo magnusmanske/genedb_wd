@@ -1,9 +1,15 @@
 {
 	"species" : {
-		"Pf" : { "species":"Q311383" , "file_root":"Pfalciparum" , "genomic_assembly":"Q18968099" } ,
-		"Pr" : { "species":"Q19730945" , "file_root":"Preichenowi" , "genomic_assembly":"Q56707230" } ,
-		"Pv" : { "species":"Q311376" , "file_root":"PvivaxP01" , "genomic_assembly":"Q59716615" } ,
-		"Pb" : { "species":"Q65021" , "file_root":"Pberghei" , "genomic_assembly":"Q59904989" } ,
-		"Po" : { "species":"Q134445" , "file_root":"Povale" , "genomic_assembly":"Q59859177" }
+		"Pfalciparum"  : { "species":"Q311383"   , "file_root":"Pfalciparum"  , "genomic_assembly":"Q18968099" } ,
+		"Preichenowi"  : { "species":"Q19730945" , "file_root":"Preichenowi"  , "genomic_assembly":"Q56707230" } ,
+		"Pvivax"       : { "species":"Q311376"   , "file_root":"PvivaxP01"    , "genomic_assembly":"Q59716615" } ,
+		"Pberghei"     : { "species":"Q65021"    , "file_root":"Pberghei"     , "genomic_assembly":"Q59904989" } ,
+		"Povale"       : { "species":"Q134445"   , "file_root":"Povale"		  , "genomic_assembly":"Q59859177" } ,
+		"Pchabaudi"    : { "species":"Q7201860"  , "file_root":"Pchabaudi"    , "genomic_assembly":"Q59946687" } ,
+		"Pgallinaceum" : { "species":"Q7201888"  , "file_root":"Pgallinaceum" , "genomic_assembly":"Q59946711" } ,
+		"Pknowlesi"    : { "species":"Q241594"   , "file_root":"Pknowlesi"    , "genomic_assembly":"Q59946735" } ,
+		"Pmalariae"    : { "species":"Q133969"   , "file_root":"Pmalariae"    , "genomic_assembly":"Q59946756" } ,
+		"Prelictum"    : { "species":"Q20722177" , "file_root":"Prelictum"    , "genomic_assembly":"Q59946777" } ,
+		"Pyoelii"      : { "species":"Q12065970" , "file_root":"Pyoelii"      , "genomic_assembly":"Q59946800" }
 	}
 }
