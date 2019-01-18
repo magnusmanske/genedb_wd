@@ -16,6 +16,7 @@ $(document).ready ( function () {
 			'search_page.html',
 			'gene_list.html',
 			'gene.html',
+			'species.html',
 			'go_term.html',
 			'chromosome.html',
 			'protein_box.html'
@@ -29,6 +30,7 @@ $(document).ready ( function () {
 			  { path: '/go/:go_term', component: GoTerm , props:true },
 			  { path: '/search', component: SearchPage , props:true },
 			  { path: '/search/:query', component: SearchPage , props:true },
+			  { path: '/species/:species_id', component: SpeciesPage , props:true },
 			  { path: '/chromosome/:q_chromosome', component: Chromosome , props:true },
 			] ;
 			router = new VueRouter({routes}) ;
