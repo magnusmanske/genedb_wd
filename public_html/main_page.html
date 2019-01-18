@@ -18,7 +18,11 @@
 				</thead>
 				<tbody>
 					<tr v-for='species in by_species'>
-						<td><wd-link :item='species.q'></wd-link></td>
+						<td>
+							<router-link :to='"/species/"+species.q'>
+								<wd-link :item='species.q' as_text='1'></wd-link>
+							</router-link>
+						</td>
 						<td style='text-align:right;'>{{species.num}}</td>
 					</tr>
 				</tbody>
@@ -56,7 +60,7 @@ let MainPage = Vue.extend ( {
 	data : function () { return { by_species:[] } } ,
 	created : function () {
 		let me = this ;
-		let sparql = 'SELECT ?species ?speciesLabel (count(?q) AS ?genes) { ?q wdt:P31 wd:Q7187 ; wdt:P3382 [] ; wdt:P703 ?species . SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en". } } GROUP BY ?species ?speciesLabel ORDER BY ?speciesLabel' ;
+		let sparql = 'SELECT ?species ?speciesLabel ?genes {{SELECT ?species (count(?q) AS ?genes) {?q wdt:P31 wd:Q7187;wdt:P3382 [];wdt:P703 ?species} GROUP BY ?species} SERVICE wikibase:label { bd:serviceParam wikibase:language "[AUTO_LANGUAGE],en"}} ORDER BY ?speciesLabel' ;
 		wd.loadSPARQL ( sparql , function ( d ) {
 			let sd = [] ; // Species data
 			$.each ( d.results.bindings , function ( dummy , b ) {

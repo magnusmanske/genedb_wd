@@ -7,7 +7,7 @@ let wd = new WikiData() ;
 
 $(document).ready ( function () {
 	Promise.all ( [
-		vue_components.loadComponents ( ['wd-link','wd-date','tool-translate','tool-navbar','publication',
+		vue_components.loadComponents ( ['wd-link','wd-date','tool-translate','tool-navbar','publication','commons-thumbnail',
 			'chromosome_plot.html',
 			'gene_search_box.html',
 			'genedb_header.html',

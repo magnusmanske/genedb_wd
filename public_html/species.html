@@ -1,0 +1,142 @@
+<template id='species-template'>
+<div class='container'>
+	<genedb-header></genedb-header>
+	<div v-if='loading' class='row'><i>Loading...</i></div>
+	<div v-else class='row'>
+		<div class='col-12 card mb-2 mt-2'>
+			<div class='card-header'>
+				<div v-if='i.hasClaims("P18")' style='float:right'>
+					<commons-thumbnail :filename='i.getFirstStringForProperty("P18")' width='100'></commons-thumbnail>
+				</div>
+				<h1>{{i.getLabel()}}</h1>
+			</div>
+			<div class='card-body'>
+				<table class='table table-sm table-borderless'>
+					<tbody>
+						<tr v-if='i.hasClaims("P2975")'>
+							<td nowrap tt='invades'></td>
+							<td style='width:100%'>
+								<div v-for='q2 in i.getClaimItemsForProperty("P2975",true)'>
+									<wd-link :item='q2' as_text='1'></wd-link>
+								</div>
+							</td>
+						</tr>
+						<tr>
+							<td nowrap tt='wikidata'></td>
+							<td>
+								<wd-link :item='species_q' smallq='1'></wd-link>
+							</td>
+						</tr>
+						<tr>
+							<td nowrap tt='publications'></td>
+							<td>
+								<a :href='"https://tools.wmflabs.org/scholia/topic/"+species_q' class='external' target='_blank'>
+									<wd-link :item='species_q' as_text='1'></wd-link>
+								</a>
+							</td>
+						</tr>
+						<tr v-for='prop in external_props' v-if='i.hasClaims(prop)'>
+							<td nowrap>
+								<wd-link :item='prop' as_text='1'></wd-link>
+							</td>
+							<td>
+								<div v-for='external_id in i.getStringsForProperty(prop)'>
+									<a :href='wd.getItem(prop).getFirstStringForProperty("P1630").replace(/\$1/,external_id)' class='external' target='_blank'>
+										{{external_id}}
+									</a>
+								</div>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+
+
+		<div class='col-12 card mb-2 mt-2'>
+			<div class='card-header'>
+				<h1 tt='chromosomes'></h1>
+			</div>
+			<div class='card-body'>
+				<table class='table table-sm table-borderless' style='width:auto'>
+					<thead>
+						<tr>
+							<th tt='chromosome'></th>
+							<th tt='genes'></th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr v-for='chr in chromosomes'>
+							<td nowrap>
+								<router-link :to='"/chromosome/"+chr.q'>
+									<wd-link :item='chr.q' as_text='1'></wd-link>
+								</router-link>
+							</td>
+							<td style='text-align:right;font-family:Courier'>
+								{{chr.genes}}
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+</div>
+</template>
+
+
+<script>
+'use strict';
+
+let SpeciesPage = Vue.extend ( {
+	props : ['species_id'] ,
+	template : '#species-template' ,
+	data : function () { return { loading:true , species_q:'' , i:{} , external_props:['P685','P486'] , chromosomes:[] } } ,
+	created : function () {
+		let me = this ;
+		if ( /^Q\d+$/.test(me.species_id) ) {
+			me.setSpeciesQ ( me.species_id ) ;
+		} else {
+			// TODO support other identifiers?
+		}
+	} ,
+	updated : function () { tt.updateInterface(this.$el) ; } ,
+	mounted : function () { tt.updateInterface(this.$el) ; } ,
+	methods : {
+		setSpeciesQ : function ( q ) {
+			let me = this ;
+			me.species_q = q ;
+			Promise.all ( [
+				new Promise( me.loadSpeciesItem ) ,
+				new Promise( me.loadSpeciesData )
+			] )	.then ( () => {
+				me.loading = false ;
+			} ) ;
+		} ,
+		loadSpeciesData : function (resolve, reject) {
+			var me = this ;
+			let sparql = "SELECT ?chr (count(?gene) AS ?cnt) { ?chr wdt:P703 wd:" + me.species_q + " . ?gene wdt:P31 wd:Q7187 ; wdt:P3382 [] ; wdt:P1057 ?chr } GROUP BY ?chr ORDER BY ?chr" ;
+			wd.loadSPARQL ( sparql , function ( d ) {
+				me.chromosomes = [] ;
+				$.each ( d.results.bindings , function ( k , v ) {
+					me.chromosomes.push ( {
+						q : wd.itemFromBinding ( v.chr ) ,
+						genes : v.cnt.value*1
+					})
+				} ) ;
+				resolve() ;
+			} , reject ) ;
+		} ,
+		loadSpeciesItem : function (resolve, reject) {
+			let me = this ;
+			let to_load = me.external_props.slice(0);
+			to_load.push ( me.species_q ) ;
+			wd.getItemBatch ( to_load , function () {
+				me.i = wd.getItem(me.species_q) ;
+				resolve();
+			} ) ;
+		}
+	}
+} ) ;
+
+</script>
