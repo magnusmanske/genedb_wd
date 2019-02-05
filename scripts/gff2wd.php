@@ -118,7 +118,8 @@ class GFF2WD {
 	}
 
 	function loadGAF () {
-		$gaf_filename = '/data/project/genedb/data/gaf/'.$this->gffj->file_root.'.gaf' ;
+		$ftp_root = 'ftp.sanger.ac.uk/pub/genedb/releases/latest/' ;
+		$gaf_filename = '/data/project/genedb/data/gaf/'.$ftp_root.'/'.$this->gffj->file_root.'/'.$this->gffj->file_root.'.gaf.gz' ;
 		if ( !file_exists($gaf_filename) ) die ( "No GAF file: {$gaf_filename}\n") ;
 		$gaf = new GAF ( $gaf_filename ) ;
 		while ( $r = $gaf->nextEntry() ) {
