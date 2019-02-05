@@ -2,8 +2,8 @@
 	"species" : {
 		"Tbruceibrucei927"  : { "species":"Q33244"    , "file_root":"Tbruceibrucei927" , "genomic_assembly":"Q61484560" } ,
 		"Lmajor"            : { "species":"Q1950715"  , "file_root":"Lmajor"           , "genomic_assembly":"Q61484563" } ,
-		"Aniger"            : { "species":"Q132014"   , "file_root":"Aniger"           , "genomic_assembly":"Q61484569" } ,
-		"Afumigatus"        : { "species":"Q134359"   , "file_root":"Afumigatus"       , "genomic_assembly":"Q61484572" } ,
+		"Aniger"            : { "species":"Q132014"   , "file_root":"AnigerCBS51388"   , "genomic_assembly":"Q61484569" } ,
+		"Afumigatus"        : { "species":"Q134359"   , "file_root":"AfumigatusAf293"  , "genomic_assembly":"Q61484572" } ,
 		"Smansoni"          : { "species":"Q2324689"  , "file_root":"Smansoni"         , "genomic_assembly":"Q61484574" } ,
 		"Pfalciparum"       : { "species":"Q311383"   , "file_root":"Pfalciparum"      , "genomic_assembly":"Q18968099" } ,
 		"Preichenowi"       : { "species":"Q19730945" , "file_root":"Preichenowi"      , "genomic_assembly":"Q56707230" } ,
