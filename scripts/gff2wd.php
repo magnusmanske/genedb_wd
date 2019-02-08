@@ -3,12 +3,10 @@
 
 require_once ( "/data/project/genedb/scripts/GFF.php" ) ;
 require_once ( "/data/project/magnustools/public_html/php/itemdiff.php" ) ;
-#require_once ( '/data/project/genedb/public_html/php/wikidata.php' ) ;
-#require_once ( '/data/project/genedb/public_html/php/ToolforgeCommon.php' ) ;
 require_once ( '/data/project/quickstatements/public_html/quickstatements.php' ) ;
 require_once ( '/data/project/sourcemd/scripts/orcid_shared.php' ) ;
 
-#$qs = '' ;
+$qs = '' ;
 
 class GFF2WD {
 	var $tfc , $wil ;
@@ -188,11 +186,17 @@ class GFF2WD {
 		$gene_i = new BlankWikidataItem ;
 
 		# Label and aliases, en only
-		$gene_i->addLabel ( 'en' , $genedb_id ) ;
+
+		if ( isset($gene['attributes']['Name']) ) {
+			$gene_i->addLabel ( 'en' , $gene['attributes']['Name'] ) ;
+			$gene_i->addAlias ( 'en' , $genedb_id ) ;
+		} else {
+			$gene_i->addLabel ( 'en' , $genedb_id ) ;
+		}
+
 		if ( isset($gene['attributes']['previous_systematic_id']) ) {
 			foreach ( $gene['attributes']['previous_systematic_id'] AS $v ) $gene_i->addAlias ( 'en' , $v ) ;
 		}
-		if ( isset($gene['attributes']['Name']) ) $gene_i->addAlias ( 'en' , $gene['attributes']['Name'] ) ;
 		if ( isset($gene['attributes']['synonym']) ) $gene_i->addAlias ( 'en' , $gene['attributes']['synonym'] ) ;
 
 		# Statements
@@ -252,6 +256,8 @@ class GFF2WD {
 		] ;
 		$diff = $gene_i->diffToItem ( $item_to_diff , $options ) ;
 
+#print_r ( $diff ) ; exit(0);
+
 		$params = (object) [
 			'action' => 'wbeditentity' ,
 			'data' => json_encode($diff) ,
@@ -309,7 +315,7 @@ class GFF2WD {
 		if ( !$protein->hasTarget ( 'P702' , $gene_q ) ) { # Link protein to gene
 			$commands[] = "{$protein_q}\tP702\t{$gene_q}" ; # Protein:encoded by:gene
 		}
-if ( count($commands) > 0 ) print_r ( $commands ) ;
+
 		$this->addSourceToCommands ( $commands ) ;
 		$this->tfc->runCommandsQS ( $commands , $this->qs ) ;
 	}
@@ -333,7 +339,6 @@ if ( count($commands) > 0 ) print_r ( $commands ) ;
 	# This returns the Wikidata item for a single protein
 	function createOrAmendProteinItem ( $gene_q , $protein ) {
 		$genedb_id = $protein['attributes']['ID'] ;
-#print "Protein: " . json_encode($protein) . "\n" ;
 		$label = $genedb_id ;
 		$desc = '' ;
 		$literature = [] ;
@@ -375,7 +380,6 @@ if ( count($commands) > 0 ) print_r ( $commands ) ;
 		if ( isset($this->go_annotation[$genedb_id]) ) {
 			$goann = $this->go_annotation[$genedb_id] ;
 			foreach ( $goann AS $ga ) {
-#print "GO:\n" ; print_r ( $ga ) ;
 				$go_q = $this->getItemForGoTerm ( $ga['go'] ) ;
 				if ( !isset($go_q) ) {
 					print "No Wikidata item for '{$ga['go']}'!\n" ;
@@ -450,8 +454,7 @@ if ( count($commands) > 0 ) print_r ( $commands ) ;
 			'remove_only' => ['P680','P681','P682']
 		] ;
 		$diff = $protein_i->diffToItem ( $item_to_diff , $options ) ;
-#print_r ( $protein_i ) ;
-print_r ( $diff ) ;
+
 		$params = (object) [
 			'action' => 'wbeditentity' ,
 			'data' => json_encode($diff) ,
