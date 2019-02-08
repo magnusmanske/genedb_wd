@@ -2,12 +2,13 @@
 <?php
 
 require_once ( "/data/project/genedb/scripts/GFF.php" ) ;
-require_once ( '/data/project/genedb/public_html/php/wikidata.php' ) ;
-require_once ( '/data/project/genedb/public_html/php/ToolforgeCommon.php' ) ;
+require_once ( "/data/project/magnustools/public_html/php/itemdiff.php" ) ;
+#require_once ( '/data/project/genedb/public_html/php/wikidata.php' ) ;
+#require_once ( '/data/project/genedb/public_html/php/ToolforgeCommon.php' ) ;
 require_once ( '/data/project/quickstatements/public_html/quickstatements.php' ) ;
 require_once ( '/data/project/sourcemd/scripts/orcid_shared.php' ) ;
 
-$qs = '' ;
+#$qs = '' ;
 
 class GFF2WD {
 	var $tfc , $wil ;
@@ -33,11 +34,11 @@ class GFF2WD {
 		$this->dbw = $this->tfc->openDB ( 'wikidata' , 'wikidata' ) ;
 	}
 
-	function init () {
+	function init ( $genedb_id = '' ) {
 		$this->loadBasicItems() ;
 		$this->loadGAF() ;
 		$this->loadGFF() ;
-		$this->run() ;
+		$this->run($genedb_id) ;
 	}
 
 	function getQforChromosome ( $chr ) {
@@ -159,141 +160,201 @@ class GFF2WD {
 				$this->orth_genedb2q_taxon[$genedb] = $q_taxon ;
 			}
 		}
-#		print_r ( $orth_ids ) ; exit(0);
 
 	}
 
 	function createOrAmendGeneItem ( $g ) {
-		if ( !isset($g['gene']) ) die ( "No attributes for gene\n".json_encode($g)."\n" ) ;
+		if ( !isset($g['gene']) ) {
+			print "No gene:\n".json_encode($g)."\n" ;
+			return ;
+		}
 		$gene = $g['gene'] ;
-		if ( !isset($gene['attributes']) ) die ( "No attributes for gene\n".json_encode($g)."\n" ) ;
+		if ( !isset($gene['attributes']) ) {
+			print "No attributes for gene\n".json_encode($g)."\n" ;
+			return ;
+		}
 		$genedb_id = $gene['attributes']['ID'] ;
 
-#		if ( !isset($this->gffj->chr2q[$gene['seqid']]) ) die ( "Chromosome {$gene['seqid']} for {$genedb_id} not found\n" ) ;
-		$chr_q = $this->getQforChromosome ( $gene['seqid'] ) ; #$this->gffj->chr2q[$gene['seqid']] ;
-
-		$commands = [] ;
 		if ( isset($this->genedb2q[$genedb_id]) ) {
 			$gene_q = $this->genedb2q[$genedb_id] ;
 			$this->wil->loadItems ( [$gene_q] ) ;
-			$gene_i = $this->wil->getItem ( $gene_q ) ;
+			$item_to_diff = $this->wil->getItem ( $gene_q ) ;
 		} else {
-			$commands[] = 'CREATE' ;
+			$item_to_diff = new BlankWikidataItem ;
 			$gene_q = 'LAST' ;
-			$gene_i = new WDI ;
-			$gene_i->q = $gene_q ;
-			$gene_i->j = json_decode ( '{}' ) ;
 		}
-#print "{$genedb_id} : {$gene_q}\n" ;
-#print_r ( $g ) ;
+
+		$chr_q = $this->getQforChromosome ( $gene['seqid'] ) ; #$this->gffj->chr2q[$gene['seqid']] ;
+		$gene_i = new BlankWikidataItem ;
+
 		# Label and aliases, en only
-		if ( $gene_i->getLabel('en',true) == $gene_q ) $commands[] = "{$gene_q}\tLen\t\"{$genedb_id}\"" ;
-		$should_have_aliases = [] ;
+		$gene_i->addLabel ( 'en' , $genedb_id ) ;
 		if ( isset($gene['attributes']['previous_systematic_id']) ) {
-			foreach ( $gene['attributes']['previous_systematic_id'] AS $v ) $should_have_aliases[$v] = 1 ;
+			foreach ( $gene['attributes']['previous_systematic_id'] AS $v ) $gene_i->addAlias ( 'en' , $v ) ;
 		}
-		if ( isset($gene['attributes']['Name']) ) $should_have_aliases[$gene['attributes']['Name']] = 1 ;
-		if ( isset($gene['attributes']['synonym']) ) $should_have_aliases[$gene['attributes']['synonym']] = 1 ;
-		$existing_aliases = $gene_i->getAliases('en') ;
-		foreach ( $should_have_aliases AS $alias => $dummy ) {
-			if ( !in_array ( $alias , $existing_aliases) ) $commands[] = "{$gene_q}\tAen\t\"{$alias}\"" ;
-		}
+		if ( isset($gene['attributes']['Name']) ) $gene_i->addAlias ( 'en' , $gene['attributes']['Name'] ) ;
+		if ( isset($gene['attributes']['synonym']) ) $gene_i->addAlias ( 'en' , $gene['attributes']['synonym'] ) ;
 
-		if ( !$gene_i->hasClaims('P31') ) $commands[] = "{$gene_q}\tP31\tQ7187" ; # Instance of:gene
-		if ( !$gene_i->hasClaims('P279') ) $commands[] = "{$gene_q}\tP279\tQ20747295" ; # Subclass of:protein-coding gene
-		if ( !$gene_i->hasClaims('P3382') ) $commands[] = "{$gene_q}\tP3382\t\"{$genedb_id}\"" ; # GeneDB ID
-		if ( !$gene_i->hasClaims('P703') ) $commands[] = "{$gene_q}\tP703\t{$this->gffj->species}" ; # Found in:Species
-		if ( !$gene_i->hasClaims('P1057') ) $commands[] = "{$gene_q}\tP1057\t{$chr_q}" ; # Chromosome
-		if ( !$gene_i->hasClaims('P644') ) $commands[] = "{$gene_q}\tP644\t\"{$gene['start']}\"\tP659\t{$this->gffj->genomic_assembly}\tP1057\t{$chr_q}" ; # Genomic start
-		if ( !$gene_i->hasClaims('P645') ) $commands[] = "{$gene_q}\tP645\t\"{$gene['end']}\"\tP659\t{$this->gffj->genomic_assembly}\tP1057\t{$chr_q}" ; # Genomic end
-		if ( !$gene_i->hasClaims('P2548') ) { # Strand
-			$strand_q = $gene['strand'] == '+' ? 'Q22809680' : 'Q22809711' ;
-			$commands[] = "{$gene_q}\tP2548\t{$strand_q}\tP659\t{$this->gffj->genomic_assembly}\tP1057\t{$chr_q}" ; # Genomic end
-		}
+		# Statements
+		$refs = [
+			$gene_i->newSnak ( 'P248' , $gene_i->newItem('Q5531047') ) ,
+			$gene_i->newSnak ( 'P813' , $gene_i->today() )
+		] ;
+		$ga_quals = [
+			$gene_i->newSnak ( 'P659' , $gene_i->newItem($this->gffj->genomic_assembly) ) ,
+			$gene_i->newSnak ( 'P1057' , $gene_i->newItem($chr_q) )
+		] ;
+		$strand_q = $gene['strand'] == '+' ? 'Q22809680' : 'Q22809711' ;
 
+		$gene_i->addClaim ( $gene_i->newClaim('P31',$gene_i->newItem('Q7187') , [$refs] ) ) ; # Instance of:gene
+		$gene_i->addClaim ( $gene_i->newClaim('P279',$gene_i->newItem('Q20747295') , [$refs] ) ) ; # Subclass of:protein-coding gene
+		$gene_i->addClaim ( $gene_i->newClaim('P703',$gene_i->newItem($this->gffj->species) , [$refs] ) ) ; # Found in:Species
+		$gene_i->addClaim ( $gene_i->newClaim('P1057',$gene_i->newItem($chr_q) , [$refs] ) ) ; # Chromosome
+		$gene_i->addClaim ( $gene_i->newClaim('P2548',$gene_i->newItem($strand_q) , [$refs] , $ga_quals ) ) ; # Strand
+
+		$gene_i->addClaim ( $gene_i->newClaim('P3382',$gene_i->newString($genedb_id) , [$refs] ) ) ; # GeneDB ID
+		$gene_i->addClaim ( $gene_i->newClaim('P644',$gene_i->newString($gene['start']) , [$refs] , $ga_quals ) ) ; # Genomic start
+		$gene_i->addClaim ( $gene_i->newClaim('P645',$gene_i->newString($gene['end']) , [$refs] , $ga_quals ) ) ; # Genomic end
+		
 
 		# Do protein
-		$protein_q = $this->createOrAmendProteinItem ( $g , $gene_q ) ;
-		if ( isset($protein_q) and $protein_q != '' and $protein_q != 'Q' and count($g['mRNA']) == 1 and !$gene_i->hasClaims('P688') ) { # Encodes
-			$commands[] = "{$gene_q}\tP688\t{$protein_q}" ; # Encodes:Protein
+		$protein_qs = $this->createOrAmendProteinItems ( $g , $gene_q ) ;
+		if ( count($protein_qs) > 0 ) { # Encodes
+			foreach ( $protein_qs AS $protein_q ) {
+				$gene_i->addClaim ( $gene_i->newClaim('P688',$gene_i->newItem($protein_q) , [$refs] ) ) ; # Encodes:Protein
+			}
 		}
 
 		# Orthologs
-		if ( isset($protein_q) and count($g['mRNA']) == 1 and isset($g['mRNA'][0]['attributes']['orthologous_to']) ) {
-			foreach ( $g['mRNA'][0]['attributes']['orthologous_to'] AS $orth ) {
-				if ( !preg_match ( '/^(\S)+?:(\S+)/' , $orth , $m ) ) continue ;
-				$species = $m[1] ;
-				$genedb_orth = $m[2] ;
-				if ( !isset($this->orth_genedb2q[$genedb_orth]) ) continue ;
-				if ( !isset($this->orth_genedb2q_taxon[$genedb_orth]) ) continue ;
-				$orth_q = $this->orth_genedb2q[$genedb_orth] ;
-				if ( $gene_i->hasTarget('P684',$orth_q) ) continue ;
-				$orth_q_taxon = $this->orth_genedb2q_taxon[$genedb_orth] ;
-				$cmd = "{$gene_q}\tP684\t{$orth_q}\tP703\t{$orth_q_taxon}" ;
-				$commands[] = $cmd ;
+		if ( count($protein_qs) > 0 ) {
+			foreach ( $g['mRNA'] AS $protein ) {
+				if ( !isset($protein['attributes']['orthologous_to']) ) continue ;
+				foreach ( $protein['attributes']['orthologous_to'] AS $orth ) {
+					if ( !preg_match ( '/^(\S)+?:(\S+)/' , $orth , $m ) ) continue ;
+					$species = $m[1] ;
+					$genedb_orth = $m[2] ;
+					if ( !isset($this->orth_genedb2q[$genedb_orth]) ) continue ;
+					if ( !isset($this->orth_genedb2q_taxon[$genedb_orth]) ) continue ;
+					$orth_q = $this->orth_genedb2q[$genedb_orth] ;
+					$orth_q_taxon = $this->orth_genedb2q_taxon[$genedb_orth] ;
+					$gene_i->addClaim ( $gene_i->newClaim('P684',$gene_i->newItem($orth_q) , [$refs] , [ $gene_i->newSnak ( 'P703' , $gene_i->newItem($orth_q_taxon) ) ] ) ) ; # Encodes:Protein
+				}
 			}
 		}
 
 
-		# Remove GO codes from gene (should be in protein)
-		foreach ( ['P680','P681','P682'] AS $prop ) {
-			$claims = $gene_i->getClaims ( $prop ) ;
-			foreach ( $claims AS $c ) {
-				$target = $gene_i->getTarget ( $c ) ;
-				$commands[] = "-{$gene_q}\t{$prop}\t{$target}/*Now in protein*/" ;
+		$options = [
+			'ref_skip_p'=>['P813'] ,
+			'labels' => [ 'ignore_except'=>['en'] ] ,
+			'descriptions' => [ 'ignore_except'=>['en'] ] ,
+			'aliases' => [ 'ignore_except'=>['en'] ] ,
+			'remove_only' => ['P680','P681','P682']
+		] ;
+		$diff = $gene_i->diffToItem ( $item_to_diff , $options ) ;
+
+		$params = (object) [
+			'action' => 'wbeditentity' ,
+			'data' => json_encode($diff) ,
+			'summary' => 'Syncing to GeneDB (V2)' ,
+			'bot' => 1
+		] ;
+		if ( $gene_q == 'LAST' ) $params->new = 'item' ;
+		else $params->id = $gene_q ;
+
+		# Create or amend gene item
+		$new_gene_q = '' ;
+		if ( $params->data == '{}' ) { # No changes
+			if ( $gene_q == 'LAST' ) die ( "Cannot create empty gene for gene {$genedb_id}\n" ) ; # Paranoia
+		} else {
+			if ( !$this->qs->runBotAction ( $params ) ) {
+				die ( "Failed trying to edit gene '{$genedb_id}': '{$oa->error}' / ".json_encode($qs->last_res)."\n" ) ;
 			}
+			if ( $gene_q == 'LAST' ) {
+				$new_gene_q = $qs->last_res->entity->id ;
+				$this->genedb2q[$genedb_id] = $new_gene_q ;
+			}
+
 		}
 
+		if ( $gene_q == 'LAST' and $this->isItem($new_gene_q) ) $gene_q = $new_gene_q ;
+		if ( !$this->isItem ( $gene_q ) ) return ; # Paranoia
 
-		$this->addSourceToCommands ( $commands ) ;
-#print_r ( $commands ) ;
-		$new_gene_q = $this->tfc->runCommandsQS ( $commands , $this->qs ) ;
-		if ( $gene_q == 'LAST' and isset($protein_q) and $new_gene_q !== null ) {
-			$commands = [ "{$protein_q}\tP702\t{$new_gene_q}" ] ; # Protein:encoded by:gene
-			$this->addSourceToCommands ( $commands ) ;
-#print_r ( $commands ) ;
-			$this->tfc->runCommandsQS ( $commands , $this->qs ) ;
+		# Ensure gene <=> protein links
+		$to_load = $protein_qs ;
+		$to_load[] = $gene_q ;
+		$this->wil->loadItems ( $to_load ) ;
+		foreach ( $protein_qs AS $protein_q ) {
+			$this->linkProteinToGene ( $gene_q , $protein_q ) ;
 		}
 	}
 
-	function createOrAmendProteinItem ( $g , $gene_q ) {
+	function isItem ( $q ) {
+		if ( !isset($q) or $q === false or $q == null ) return false ;
+		return preg_match ( '/^Q\d+$/' , $q ) ;
+	}
+
+	function linkProteinToGene ( $gene_q , $protein_q ) {
+		if ( !$this->isItem ( $gene_q ) ) return ; # Paranoia
+		if ( !$this->isItem ( $protein_q ) ) return ; # Paranoia
+		$this->wil->loadItems ( [ $gene_q , $protein_q ] ) ;
+		$gene = $this->wil->getItem ( $gene_q ) ;
+		$protein = $this->wil->getItem ( $protein_q ) ;
+		if ( !isset($gene) or !isset($protein) ) return ; # Paranoia
+
+		$commands = [] ;
+		if ( !$gene->hasTarget ( 'P688' , $protein_q ) ) { # Link gene to protein
+			$commands[] = "{$gene_q}\tP688\t{$protein_q}" ; # Gene:encodes:Protein
+		}
+
+		if ( !$protein->hasTarget ( 'P702' , $gene_q ) ) { # Link protein to gene
+			$commands[] = "{$protein_q}\tP702\t{$gene_q}" ; # Protein:encoded by:gene
+		}
+if ( count($commands) > 0 ) print_r ( $commands ) ;
+		$this->addSourceToCommands ( $commands ) ;
+		$this->tfc->runCommandsQS ( $commands , $this->qs ) ;
+	}
+
+	# This returns an array of all Wikidata protein items for the given gene $g
+	function createOrAmendProteinItems ( $g , $gene_q ) {
+		$ret = [] ;
 		if ( !isset($g['mRNA']) ) {
 			print ( "No attributes for mRNA\n".json_encode($g)."\n" ) ;
-			return ;
-		}
-		$protein = $g['mRNA'][0] ;
-		if ( !isset($protein['attributes']) ) die ( "No attributes for protein\n".json_encode($g)."\n" ) ;
-		$genedb_id = $protein['attributes']['ID'] ;
-#print "PROTEIN ID:{$genedb_id}\n" ;
-#print_r($this->protein_genedb2q);
-		$commands = [] ;
-		if ( isset($this->protein_genedb2q[$genedb_id]) ) {
-			$protein_q = $this->protein_genedb2q[$genedb_id] ;
-			$this->wil->loadItems ( [$protein_q] ) ;
-			$protein_i = $this->wil->getItem ( $protein_q ) ;
 		} else {
-			$commands[] = 'CREATE' ;
-			$protein_q = 'LAST' ;
-			$protein_i = new WDI ;
-			$protein_i->q = $protein_q ;
-			$protein_i->j = json_decode ( '{}' ) ;
+			foreach ( $g['mRNA'] AS $protein ) {
+				if ( !isset($protein['attributes']) ) die ( "No attributes for protein\n".json_encode($g)."\n" ) ;
+				$r = $this->createOrAmendProteinItem ( $gene_q , $protein ) ;
+				if ( !isset($r) or $r == '' or $r === false or $r == 'Q' ) continue ; # Paranoia
+				$ret[] = $r ;
+			}
 		}
-#if($protein_q=='LAST'){print_r ( $commands ) ; print "{$gene_q}/{$genedb_id}\n" ; exit(0) ;}
+		return $ret ;
+	}
 
+	# This returns the Wikidata item for a single protein
+	function createOrAmendProteinItem ( $gene_q , $protein ) {
+		$genedb_id = $protein['attributes']['ID'] ;
+#print "Protein: " . json_encode($protein) . "\n" ;
 		$label = $genedb_id ;
 		$desc = '' ;
-		$should_have_aliases = [] ;
 		$literature = [] ;
 
 		if ( isset($protein['attributes']['literature']) ) {
 			foreach ( $protein['attributes']['literature'] AS $lit_id ) $literature[$lit_id] = 1 ;
 		}
 
-		if ( !$protein_i->hasClaims('P31') ) $commands[] = "{$protein_q}\tP31\tQ8054" ; # Instance of:protein
-		if ( !$protein_i->hasClaims('P279') ) $commands[] = "{$protein_q}\tP279\tQ8054" ; # Instance of:protein
-		if ( !$protein_i->hasClaims('P703') ) $commands[] = "{$protein_q}\tP703\t{$this->gffj->species}" ; # Found in:Species
-		if ( $gene_q != 'LAST' and !$protein_i->hasClaims('P702') ) $commands[] = "{$protein_q}\tP702\t{$gene_q}" ; # Encoded by:gene
-		if ( !$protein_i->hasClaims('P3382') ) $commands[] = "{$protein_q}\tP3382\t\"{$genedb_id}\"" ; # GeneDB ID
+		$protein_i = new BlankWikidataItem ;
+
+		# Claims
+		$refs = [
+			$protein_i->newSnak ( 'P248' , $protein_i->newItem('Q5531047') ) ,
+			$protein_i->newSnak ( 'P813' , $protein_i->today() )
+		] ;
+
+		$protein_i->addClaim ( $protein_i->newClaim('P31',$protein_i->newItem('Q8054') , [$refs] ) ) ; # Instance of:protein
+		$protein_i->addClaim ( $protein_i->newClaim('P279',$protein_i->newItem('Q8054') , [$refs] ) ) ; # Subclass of:protein
+		$protein_i->addClaim ( $protein_i->newClaim('P703',$protein_i->newItem($this->gffj->species) , [$refs] ) ) ; # Found in:Species
+		if ( $gene_q != 'LAST' ) $protein_i->addClaim ( $protein_i->newClaim('P702',$protein_i->newItem($gene_q) , [$refs] ) ) ; # Encoded by:gene
+		$protein_i->addClaim ( $protein_i->newClaim('P3382',$protein_i->newString($genedb_id) , [$refs] ) ) ; # GeneDB ID
 
 		$xref2prop = [
 #			'MPMP' => '???' ,
@@ -307,64 +368,110 @@ class GFF2WD {
 				$value = trim($xref[1]) ;
 				if ( !isset($xref2prop[$key]) ) continue ;
 				$prop = $xref2prop[$key] ;
-				if ( $protein_i->hasClaims($prop) ) continue ;
-				$commands[] = "{$protein_q}\t{$prop}\t\"{$value}\"" ;
+				$protein_i->addClaim ( $protein_i->newClaim($prop,$protein_i->newString($value) , [$refs] ) ) ;
 			}
 		}
 
 		if ( isset($this->go_annotation[$genedb_id]) ) {
 			$goann = $this->go_annotation[$genedb_id] ;
-#print_r ( $goann ) ;
 			foreach ( $goann AS $ga ) {
+#print "GO:\n" ; print_r ( $ga ) ;
 				$go_q = $this->getItemForGoTerm ( $ga['go'] ) ;
-				if ( !isset($go_q) ) continue ;
+				if ( !isset($go_q) ) {
+					print "No Wikidata item for '{$ga['go']}'!\n" ;
+					continue ;
+				}
 				if ( !isset($this->aspects[$ga['aspect']]) ) continue ;
 				$aspect_p = $this->aspects[$ga['aspect']] ;
-				if ( $protein_i->hasTarget($aspect_p,$go_q) ) continue ;
 				if ( !isset($this->evidence_codes[$ga['evidence_code']]) ) continue ;
 				$evidence_code_q = $this->evidence_codes[$ga['evidence_code']] ;
 
-				$lit_source = '' ;
+				$lit_source = [] ;
 				$lit_id = $ga['db_ref'] ;
 				if ( $lit_id == 'WORKSHOP' ) continue ; // Huh
 				$lit_q = $this->getOrCreatePaperFromID ( $lit_id ) ;
 				if ( isset($lit_q) ) {
-					$lit_source = "S248\t{$lit_q}" ;
+					$lit_source = [ 'P248' , $protein_i->newItem($lit_q) ] ;
 				} else {
-					if ( preg_match ( '/^InterPro:(.+)$/' , $ga['with_from'] , $m ) ) {
-						$lit_source = "S2926\t\"{$m[1]}\"" ;
+					if ( preg_match ( '/^GO_REF:(\d+)$/' , $lit_id , $m ) ) {
+						$lit_source = [ 'P854' , $protein_i->newString('https://github.com/geneontology/go-site/blob/master/metadata/gorefs/goref-'.$m[1].'.md') ] ;
+					} else if ( preg_match ( '/^InterPro:(.+)$/' , $ga['with_from'] , $m ) ) {
+						$lit_source = [ 'P2926' , $protein_i->newString($m[1]) ] ;
+					} else {
+#						print "!!{$ga['with_from']} / {$lit_id}\n" ;
 					}
 				}
-				if ( $lit_source == '' ) continue ; # Paranoia
 
-				$commands[] = "{$protein_q}\t{$aspect_p}\t{$go_q}\tP459\t{$evidence_code_q}\t$lit_source\tS1640\tQ5531047" ; # \tS459\t{$evidence_code_q}
+#				if ( count($lit_source) == 0 ) continue ; # Paranoia
+
+				$qualifiers = [
+					$protein_i->newSnak ( 'P459' , $protein_i->newItem($evidence_code_q) )
+				] ;
+				if ( isset($ga['with_from']) ) {
+					if ( preg_match ( '/^Pfam:(.+)$/' , $ga['with_from'] , $m ) ) {
+						$qualifiers[] = $protein_i->newSnak ( 'P3519' , $protein_i->newString($m[1]) ) ;
+					}
+				}
+
+				$refs2 = [] ;
+				if ( count($lit_source) > 0 ) $refs2[] = [
+					$protein_i->newSnak ( $lit_source[0] , $lit_source[1] ) ,
+					$protein_i->newSnak ( 'P1640' , $protein_i->newItem('Q5531047') ) ,
+					$protein_i->newSnak ( 'P813' , $protein_i->today() )
+				] ;
+				$protein_i->addClaim ( $protein_i->newClaim($aspect_p,$protein_i->newItem($go_q) , $refs2 , $qualifiers ) ) ;
 				$literature[$lit_id] = 1 ;
 
 				if ( isset($ga['name']) and $label == $genedb_id ) {
 					$label = $ga['name'] ;
-					$should_have_aliases[$genedb_id] = 1 ;
+					$protein_i->addAlias ( 'en' , $genedb_id ) ;
 				}
-				foreach ( $ga['synonym'] AS $alias ) $should_have_aliases[$alias] = 1 ;
+				foreach ( $ga['synonym'] AS $alias ) $protein_i->addAlias ( 'en' , $alias ) ;
 			}
 		}
 
-		if ( $protein_i->getLabel('en',true) == $protein_q ) $commands[] = "{$protein_q}\tLen\t\"{$label}\"" ;
-		if ( !$protein_i->hasDescriptionInLanguage('en') and $desc!='' ) $commands[] = "{$protein_q}\tDen\t\"{$desc}\"" ;
-		$existing_aliases = $protein_i->getAliases('en') ;
-		foreach ( $should_have_aliases AS $alias => $dummy ) {
-			if ( trim($alias) == '' ) continue ;
-			if ( !in_array ( $alias , $existing_aliases) ) $commands[] = "{$protein_q}\tAen\t\"{$alias}\"" ;
+		$protein_i->addLabel ( 'en' , $label ) ;
+		$protein_i->addDescription ( 'en' , $desc ) ;
+
+		if ( isset($this->protein_genedb2q[$genedb_id]) ) {
+			$protein_q = $this->protein_genedb2q[$genedb_id] ;
+			$this->wil->loadItems ( [$protein_q] ) ;
+			$item_to_diff = $this->wil->getItem ( $protein_q ) ;
+		} else {
+			$item_to_diff = new BlankWikidataItem ;
+			$protein_q = 'LAST' ;
 		}
 
-		$this->addSourceToCommands ( $commands ) ;
-#if ( count($commands) > 0 ) print_r ( $commands ) ;
-		
-		$new_protein_q = $this->tfc->runCommandsQS ( $commands , $this->qs ) ;
-		if ( $protein_q == 'LAST' ) {
-			$this->protein_genedb2q[$genedb_id] = $new_protein_q ;
-			$protein_q = $new_protein_q ;
-		}
+		$options = [
+			'ref_skip_p'=>['P813'] ,
+			'labels' => [ 'ignore_except'=>['en'] ] ,
+			'descriptions' => [ 'ignore_except'=>['en'] ] ,
+			'aliases' => [ 'ignore_except'=>['en'] ] ,
+			'remove_only' => ['P680','P681','P682']
+		] ;
+		$diff = $protein_i->diffToItem ( $item_to_diff , $options ) ;
+#print_r ( $protein_i ) ;
+print_r ( $diff ) ;
+		$params = (object) [
+			'action' => 'wbeditentity' ,
+			'data' => json_encode($diff) ,
+			'summary' => 'Syncing to GeneDB (V2)' ,
+			'bot' => 1
+		] ;
+		if ( $protein_q == 'LAST' ) $params->new = 'item' ;
+		else $params->id = $protein_q ;
 
+		if ( $params->data == '{}' ) { # No changes
+			if ( $protein_q == 'LAST' ) die ( "Cannot create empty protein for gene {$gene_q}\n" ) ; # Paranoia
+		} else {
+			if ( !$this->qs->runBotAction ( $params ) ) {
+				die ( "Failed trying to edit protein '{$label}': '{$oa->error}' / ".json_encode($qs->last_res)."\n" ) ;
+			}
+			if ( $protein_q == 'LAST' ) {
+				$protein_q = $qs->last_res->entity->id ;
+				$this->protein_genedb2q[$genedb_id] = $protein_q ;
+			}
+		}
 
 		# attributes:literature "main subject"
 		$commands = [] ;
@@ -378,22 +485,65 @@ class GFF2WD {
 			if ( !isset($protein_q) or $protein_q=='' or $protein_q=='Q' ) continue ;
 			$commands[] = "{$lit_q}\tP921\t{$protein_q}" ;
 		}
-		$this->addSourceToCommands ( $commands ) ;
-#print_r ( $commands ) ;
 		$this->tfc->runCommandsQS ( $commands , $this->qs ) ;
-#print "PROTEIN: {$protein_q}\n" ;
+
 		return $protein_q ;
 	}
 
-	function getItemForGoTerm ( $go_term ) {
+	function getItemForGoTerm ( $go_term , $cache = [] ) {
 		if ( isset($this->go_term_cache[$go_term]) ) return $this->go_term_cache[$go_term] ;
 		$sparql = "SELECT ?q { ?q wdt:P686 '{$go_term}' }" ;
+#		$sparql = "SELECT DISTINCT ?q { ?q p:P686 ?wds . ?wds ?v '{$go_term}' }" ; # This works, but shouldn't be used, as is returns deprecated items
 		$items = $this->tfc->getSPARQLitems ( $sparql ) ;
-		if ( count($items) != 1 ) return ;
+		if ( count($items) != 1 ) {
+			return $this->tryUpdatedGoTerm ( $go_term , $cache ) ; # Fallback
+		}
 		$ret = $items[0] ;
 		$this->go_term_cache[$go_term] = $ret ;
 		return $ret ;
 	}
+
+	# In case a GO term was not found on Wikidata, try EBI if it was deprecates, they'll give the current ID instead
+	function tryUpdatedGoTerm ( $go_term , $cache = [] ) {
+		if ( isset($cache[$go_term]) ) return ; # Circular GO references?
+		$url = "https://www.ebi.ac.uk/QuickGO/services/ontology/go/terms/{$go_term}/complete" ;
+		$j = json_decode ( file_get_contents ( $url ) ) ;
+		if ( !isset($j) or $j === false or $j == null or !isset($j->results) ) {
+			print "No Wikidata item for GO term '{$go_term}'\n" ;
+			return ;
+		}
+		if ( count($j->results) != 1 ) {
+			print "Multiple GO terms for {$go_term} at {$url}\n";
+			return ;
+		}
+		$cache[$go_term] = $go_term ;
+		$go_term = $j->results[0]->id ;
+		return $this->getItemForGoTerm ( $go_term ) ;
+	}
+
+
+/*
+	// This works, but shouldn't be used, as is returns deprecated items
+	function getItemForGoTermViaSearch ( $go_term ) {
+		$url = "https://www.wikidata.org/w/api.php?action=query&list=search&srnamespace=0&format=json&srsearch=" . urlencode('haswbstatement:P686='.$go_term) ;
+		$j = json_decode ( file_get_contents ( $url ) ) ;
+		if ( !isset($j) or !isset($j->query)  or !isset($j->query->search) ) return ;
+		$items = [] ;
+		foreach ( $j->query->search AS $sr ) $items[$sr->title] = $sr->title ;
+		$this->wil->loadItems ( $items ) ;
+		$ret = [] ;
+		foreach ( $items AS $q ) {
+			$i = $this->wil->getItem ( $q ) ;
+			if ( !isset($i) ) continue ;
+			$values = $i->getStrings('P686') ;
+			if ( !in_array($go_term,$values) ) continue ;
+			$ret[] = $q ;
+		}
+		if ( count($ret) != 1 ) return ;
+		$this->go_term_cache[$go_term] = $ret[0] ;
+		return $ret[0] ;
+	}
+*/
 
 	private function getAndCacheItemForSPARQL ( $sparql ) {
 		$items = [] ;
@@ -433,12 +583,17 @@ class GFF2WD {
 		}
 	}
 
-	function run () {
-#		$this->createOrAmendGeneItem ( $this->genes['PF3D7_0223500'] ) ; exit(0); # TESTING 'PF3D7_0100100' / 'PF3D7_0102300'
+	function run ( $genedb_id = '' ) {
+		if ( !isset($genedb_id) ) $genedb_id = '' ;
+		if ( $genedb_id != '' ) { # Single gene mode, usually for testing
+			$this->createOrAmendGeneItem ( $this->genes[$genedb_id] ) ;
+			return ;
+		}
 		foreach ( $this->genes AS $gene ) {
 			$this->createOrAmendGeneItem ( $gene ) ;
 		}
 	}
+	
 } ;
 
 if ( !isset($argv[1]) ) die ( "Species key required\n" ) ;
@@ -448,7 +603,7 @@ $config = json_decode( ( file_get_contents ( '/data/project/genedb/scripts/confi
 
 $gff2wd = new GFF2WD ;
 $gff2wd->gffj = (object) $config->species->$sk ;
-$gff2wd->init() ;
+$gff2wd->init($argv[2]) ;
 
 
 function getQS () {
