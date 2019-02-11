@@ -19,7 +19,7 @@ class GFF{
     if ( substr($line,0,1) == '#' ) return ['comment'=>$line] ;
     if ( substr($line,0,1) == '>' ) return false ; // Don't want the raw sequence
 
-    $cell=split("\t",$line);
+    $cell=explode("\t",$line);
     
     # create an associative array for the GFF
     foreach ( ['seqid','source','type','start','end','score','strand','phase'] AS $k => $v ) {
@@ -31,12 +31,12 @@ class GFF{
       $attributes=$cell[8];
 
       # parse the attributes
-      $attributes=split(';',$attributes);
+      $attributes=explode(';',$attributes);
       # each attribute should be in key=value format
       $numAttributes=count($attributes);
       for($i=0;$i<$numAttributes;$i++){
         $attribute=$attributes[$i];
-        list($key,$value)=split("=",$attribute);
+        list($key,$value)=explode("=",$attribute);
         $key=urldecode($key);
         $value=urldecode($value);
 
@@ -89,7 +89,7 @@ class GAF{
   function parseGAFLine($line){
     if ( substr($line,0,1) == '!' ) return ['header'=>$line] ; // Header
 
-    $cell=split("\t",$line);
+    $cell=explode("\t",$line);
     
     # create an associative array for the GAF
     foreach ( ['db','id','symbol','qualifier','go','db_ref','evidence_code','with_from','aspect','name','synonym','type','taxon','date','assigned_by','extension','product'] AS $k => $v ) {

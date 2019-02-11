@@ -6,9 +6,14 @@ require_once ( "/data/project/magnustools/public_html/php/itemdiff.php" ) ;
 require_once ( '/data/project/quickstatements/public_html/quickstatements.php' ) ;
 require_once ( '/data/project/sourcemd/scripts/orcid_shared.php' ) ;
 
+set_time_limit ( 60 * 1000 ) ; // Seconds
+
+error_reporting(E_ERROR|E_ALL|E_CORE_ERROR|E_COMPILE_ERROR);
+
 $qs = '' ;
 
 class GFF2WD {
+	var $use_local_data_files = false ;
 	var $tfc , $wil ;
 	var $gffj ;
 	var $go_annotation = [] ;
@@ -38,6 +43,28 @@ class GFF2WD {
 		$this->loadGFF() ;
 		$this->run($genedb_id) ;
 	}
+
+	function computeFilenameGFF () { # TODO use FTP directly
+		if ( $this->use_local_data_files ) {
+			$gff_filename = '/data/project/genedb/data/gff/'.$this->gffj->file_root.'.gff3.gz' ;
+			if ( !file_exists($gff_filename) ) die ( "No GFF file: {$gff_filename}\n") ;
+			return $gff_filename ;
+		} else {
+			return "ftp://ftp.sanger.ac.uk/pub/genedb/apollo_releases/latest/" . $this->gffj->file_root.'.gff3.gz' ; ;
+		}
+	}
+
+	function computeFilenameGAF () { # TODO use FTP directly
+		if ( $this->use_local_data_files ) {
+			$ftp_root = 'ftp.sanger.ac.uk/pub/genedb/releases/latest/' ;
+			$gaf_filename = '/data/project/genedb/data/gaf/'.$ftp_root.'/'.$this->gffj->file_root.'/'.$this->gffj->file_root.'.gaf.gz' ;
+			if ( !file_exists($gaf_filename) ) die ( "No GAF file: {$gaf_filename}\n") ;
+			return $gaf_filename ;
+		} else {
+			return "ftp://ftp.sanger.ac.uk/pub/genedb/releases/latest/" . $this->gffj->file_root.'/'.$this->gffj->file_root.'.gaf.gz' ;
+		}
+	}
+
 
 	function getQforChromosome ( $chr ) {
 		if ( isset($this->gffj->chr2q[$chr]) ) return $this->gffj->chr2q[$chr] ;
@@ -117,9 +144,7 @@ class GFF2WD {
 	}
 
 	function loadGAF () {
-		$ftp_root = 'ftp.sanger.ac.uk/pub/genedb/releases/latest/' ;
-		$gaf_filename = '/data/project/genedb/data/gaf/'.$ftp_root.'/'.$this->gffj->file_root.'/'.$this->gffj->file_root.'.gaf.gz' ;
-		if ( !file_exists($gaf_filename) ) die ( "No GAF file: {$gaf_filename}\n") ;
+		$gaf_filename = $this->computeFilenameGAF() ;
 		$gaf = new GAF ( $gaf_filename ) ;
 		while ( $r = $gaf->nextEntry() ) {
 			if ( isset($r['header'] ) ) continue ;
@@ -128,8 +153,7 @@ class GFF2WD {
 	}
 
 	function loadGFF () {
-		$gff_filename = '/data/project/genedb/data/gff/'.$this->gffj->file_root.'.gff3.gz' ;
-		if ( !file_exists($gff_filename) ) die ( "No GFF file: {$gff_filename}\n") ;
+		$gff_filename = $this->computeFilenameGFF() ;
 		$gff = new GFF ( $gff_filename ) ;
 		$orth_ids = [] ;
 		while ( $r = $gff->nextEntry() ) {
@@ -161,7 +185,7 @@ class GFF2WD {
 
 	}
 
-	function createOrAmendGeneItem ( $g ) {
+	public function createOrAmendGeneItem ( $g ) {
 		if ( !isset($g['gene']) ) {
 			print "No gene:\n".json_encode($g)."\n" ;
 			return ;
@@ -256,8 +280,6 @@ class GFF2WD {
 		] ;
 		$diff = $gene_i->diffToItem ( $item_to_diff , $options ) ;
 
-#print_r ( $diff ) ; exit(0);
-
 		$params = (object) [
 			'action' => 'wbeditentity' ,
 			'data' => json_encode($diff) ,
@@ -278,8 +300,10 @@ class GFF2WD {
 			if ( $gene_q == 'LAST' ) {
 				$new_gene_q = $qs->last_res->entity->id ;
 				$this->genedb2q[$genedb_id] = $new_gene_q ;
+				$this->wil->updateItem ( $new_gene_q ) ; # Is new
+			} else {
+				$this->wil->updateItem ( $gene_q ) ; # Has changed
 			}
-
 		}
 
 		if ( $gene_q == 'LAST' and $this->isItem($new_gene_q) ) $gene_q = $new_gene_q ;
@@ -474,6 +498,7 @@ class GFF2WD {
 				$protein_q = $qs->last_res->entity->id ;
 				$this->protein_genedb2q[$genedb_id] = $protein_q ;
 			}
+			$this->wil->updateItem ( $protein_q ) ; # Has changed
 		}
 
 		# attributes:literature "main subject"
