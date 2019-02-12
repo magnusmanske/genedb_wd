@@ -8,7 +8,7 @@ require_once ( '/data/project/sourcemd/scripts/orcid_shared.php' ) ;
 
 set_time_limit ( 60 * 1000 ) ; // Seconds
 
-error_reporting(E_ERROR|E_ALL|E_CORE_ERROR|E_COMPILE_ERROR);
+error_reporting(E_ERROR|E_CORE_ERROR|E_COMPILE_ERROR); # |E_ALL
 
 $qs = '' ;
 
@@ -276,7 +276,7 @@ class GFF2WD {
 			'labels' => [ 'ignore_except'=>['en'] ] ,
 			'descriptions' => [ 'ignore_except'=>['en'] ] ,
 			'aliases' => [ 'ignore_except'=>['en'] ] ,
-			'remove_only' => ['P680','P681','P682']
+			'remove_only' => ['P680','P681','P682','P1057']
 		] ;
 		$diff = $gene_i->diffToItem ( $item_to_diff , $options ) ;
 
@@ -631,7 +631,8 @@ $config = json_decode( ( file_get_contents ( '/data/project/genedb/scripts/confi
 
 $gff2wd = new GFF2WD ;
 $gff2wd->gffj = (object) $config->species->$sk ;
-$gff2wd->init($argv[2]) ;
+if ( isset($argv[2]) ) $gff2wd->init($argv[2]) ;
+else $gff2wd->init() ;
 
 
 function getQS () {
