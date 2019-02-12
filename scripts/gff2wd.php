@@ -159,12 +159,12 @@ class GFF2WD {
 		while ( $r = $gff->nextEntry() ) {
 			if ( isset($r['comment']) ) continue ;
 			if ( !in_array ( $r['type'] , ['gene','mRNA'] ) ) continue ;
-#			if ( !isset($this->gffj->chr2q[$r['seqid']]) ) continue ; # Paranoia
 			if ( isset($r['attributes']['Parent']) ) $this->genes[$r['attributes']['Parent']][$r['type']][] = $r ;
 			else $this->genes[$r['attributes']['ID']]['gene'] = $r ;
 			if ( isset($r['attributes']['orthologous_to']) ) {
 				foreach ( $r['attributes']['orthologous_to'] AS $orth ) {
-					if ( !preg_match ( '/^\S+?:(\S+)/' , $orth , $m ) ) continue ;
+					if ( !preg_match ( '/^\s*\S+?:(\S+)/' , $orth , $m ) ) continue ;
+#if ( preg_match ( '/PRELSG_1210800/' , $orth ) ) print "!{$orth}!\n" ;
 					$orth_ids[$m[1]] = 1 ;
 				}
 			}
@@ -173,11 +173,14 @@ class GFF2WD {
 		# Orthologs cache
 		$orth_chunks = array_chunk ( array_keys($orth_ids) , 100 ) ;
 		foreach ( $orth_chunks AS $chunk ) {
-			$j = $this->tfc->getSPARQL ( "SELECT ?q ?genedb ?taxon { VALUES ?genedb { '" . implode("' '",$chunk) . "' } . ?q wdt:P3382 ?genedb ; wdt:P703 ?taxon }" ) ;
+			$sparql = "SELECT ?q ?genedb ?taxon { VALUES ?genedb { '" . implode("' '",$chunk) . "' } . ?q wdt:P3382 ?genedb ; wdt:P703 ?taxon }" ;
+			$j = $this->tfc->getSPARQL ( $sparql ) ;
+#if ( in_array('PRELSG_1210800',$chunk) ) print_r($j);
 			foreach ( $j->results->bindings AS $v ) {
 				$q = $this->tfc->parseItemFromURL ( $v->q->value ) ;
 				$q_taxon = $this->tfc->parseItemFromURL ( $v->taxon->value ) ;
 				$genedb = $v->genedb->value ;
+#if ( $genedb == 'PRELSG_1210800' ) print "{$genedb}\t{$q}\t{$q_taxon}\n" ;
 				$this->orth_genedb2q[$genedb] = $q ;
 				$this->orth_genedb2q_taxon[$genedb] = $q_taxon ;
 			}
@@ -258,8 +261,8 @@ class GFF2WD {
 			foreach ( $g['mRNA'] AS $protein ) {
 				if ( !isset($protein['attributes']['orthologous_to']) ) continue ;
 				foreach ( $protein['attributes']['orthologous_to'] AS $orth ) {
-					if ( !preg_match ( '/^(\S)+?:(\S+)/' , $orth , $m ) ) continue ;
-					$species = $m[1] ;
+					if ( !preg_match ( '/^\s*(\S)+?:(\S+)/' , $orth , $m ) ) continue ;
+					$species = $m[1] ; # Not used
 					$genedb_orth = $m[2] ;
 					if ( !isset($this->orth_genedb2q[$genedb_orth]) ) continue ;
 					if ( !isset($this->orth_genedb2q_taxon[$genedb_orth]) ) continue ;
@@ -295,6 +298,7 @@ class GFF2WD {
 			if ( $gene_q == 'LAST' ) die ( "Cannot create empty gene for gene {$genedb_id}\n" ) ; # Paranoia
 		} else {
 			if ( !$this->qs->runBotAction ( $params ) ) {
+				print_r ( $params ) ;
 				die ( "Failed trying to edit gene '{$genedb_id}': '{$oa->error}' / ".json_encode($qs->last_res)."\n" ) ;
 			}
 			if ( $gene_q == 'LAST' ) {
@@ -398,6 +402,14 @@ class GFF2WD {
 				if ( !isset($xref2prop[$key]) ) continue ;
 				$prop = $xref2prop[$key] ;
 				$protein_i->addClaim ( $protein_i->newClaim($prop,$protein_i->newString($value) , [$refs] ) ) ;
+			}
+		}
+
+		if ( isset($protein['attributes']) and isset($protein['attributes']['product']) and is_array($protein['attributes']['product']) ) {
+			foreach ( $protein['attributes']['product'] AS $v ) {
+				if ( preg_match ( '/^with=InterPro:(.+)$/' , $v , $m ) ) {
+#					$protein_i->addClaim ( $protein_i->newClaim('P2926',$protein_i->newString($m[1]) , [$refs] ) ) ; # Deactivated; applies to family?
+				}
 			}
 		}
 
